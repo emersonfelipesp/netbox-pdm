@@ -24,6 +24,7 @@ class NetBoxPDMConfig(PluginConfig):
     base_url = "pdm"
     min_version = "4.5.8"
     max_version = "4.6.99"
+    required_plugins = ["netbox_proxbox"]
     required_settings: list[str] = []
     default_settings = {
         # Fallback only — when netbox-proxbox is installed, its singleton
