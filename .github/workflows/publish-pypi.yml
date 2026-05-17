@@ -1,0 +1,206 @@
+name: Release validation and publish
+
+on:
+  push:
+    tags:
+      - "v*"
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      publish_target:
+        description: "Package index to publish to."
+        required: true
+        type: choice
+        options:
+          - testpypi
+          - pypi
+        default: testpypi
+      source_ref:
+        description: "Version tag to publish, for example v0.0.1 or v0.0.1rc1."
+        required: false
+        type: string
+        default: ""
+      expected_version:
+        description: "Optional guard without the leading v."
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-release:
+    name: prepare artifacts + metadata
+    runs-on: ubuntu-latest
+    outputs:
+      package_name: ${{ steps.meta.outputs.package_name }}
+      publish_target: ${{ steps.meta.outputs.publish_target }}
+      tag: ${{ steps.meta.outputs.tag }}
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || (github.event_name == 'release' && github.event.release.tag_name || github.ref) }}
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Validate package metadata and tag
+        id: meta
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          PUBLISH_TARGET_INPUT: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_target || '' }}
+          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+          SOURCE_REF_INPUT: ${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || '' }}
+          EXPECTED_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_version || '' }}
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import re
+          import tomllib
+
+          data = tomllib.loads(pathlib.Path('pyproject.toml').read_text(encoding='utf-8'))
+          project_name = data['project']['name']
+          version = data['project']['version']
+          tag = os.getenv('GITHUB_REF_NAME', '')
+          event = os.getenv('GITHUB_EVENT_NAME', '')
+          release_tag = os.getenv('RELEASE_TAG_NAME', '') or ''
+          source_ref = os.getenv('SOURCE_REF_INPUT', '') or ''
+          ref_name = release_tag or source_ref or tag
+          if ref_name.startswith('refs/tags/'):
+              ref_name = ref_name.removeprefix('refs/tags/')
+          expected_version = os.getenv('EXPECTED_VERSION', '') or ''
+          if project_name != 'netbox-pdm':
+              raise SystemExit(f'Expected project name netbox-pdm, got {project_name!r}')
+          if expected_version and expected_version != version:
+              raise SystemExit(f'Expected version {expected_version!r}, got {version!r}')
+          expected_tag = f'v{version}'
+          if not ref_name.startswith('v'):
+              raise SystemExit(f'Release publishing requires a version tag ref, got {ref_name!r}')
+          if ref_name != expected_tag:
+              raise SystemExit(f'Tag/version mismatch: tag={ref_name!r}, version={version!r}')
+
+          target_input = os.getenv('PUBLISH_TARGET_INPUT', '') or ''
+          if target_input:
+              publish_target = target_input
+          elif event == 'release':
+              publish_target = 'pypi'
+          elif event == 'push' and re.search(r'rc\d+$', version):
+              publish_target = 'pypi'
+          else:
+              publish_target = 'testpypi'
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
+              fh.write(f'package_name={project_name}\n')
+              fh.write(f'publish_target={publish_target}\n')
+              fh.write(f'tag={expected_tag}\n')
+              fh.write(f'version={version}\n')
+          PY
+
+      - name: Build distribution
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/*
+          if-no-files-found: error
+
+  publish-testpypi:
+    name: publish to TestPyPI
+    if: needs.prepare-release.outputs.publish_target == 'testpypi'
+    needs: prepare-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Download dist artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+
+      - name: Upload to TestPyPI
+        env:
+          TEST_PYPI_USERNAME: ${{ secrets.TEST_PYPI_USERNAME }}
+          TEST_PYPI_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
+        run: |
+          python -m pip install --upgrade pip twine
+          python -m twine upload \
+            --non-interactive \
+            --repository-url https://test.pypi.org/legacy/ \
+            --username "$TEST_PYPI_USERNAME" \
+            --password "$TEST_PYPI_TOKEN" \
+            dist/*
+
+  publish-pypi:
+    name: publish to PyPI
+    if: needs.prepare-release.outputs.publish_target == 'pypi'
+    needs: prepare-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Download dist artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+
+      - name: Upload to PyPI
+        env:
+          PYPI_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          python -m pip install --upgrade pip twine
+          python -m twine upload \
+            --non-interactive \
+            --repository-url https://upload.pypi.org/legacy/ \
+            --username "$PYPI_USERNAME" \
+            --password "$PYPI_TOKEN" \
+            dist/*
+
+  validate:
+    name: validate / py${{ matrix.python-version }}
+    needs: [prepare-release]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || (github.event_name == 'release' && github.event.release.tag_name || github.ref) }}
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install + compile
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[test]"
+          python -m compileall netbox_pdm tests
+
+      - name: Pytest
+        run: pytest tests

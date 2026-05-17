@@ -1,0 +1,3 @@
+recursive-include netbox_pdm/templates *
+recursive-include netbox_pdm/static *
+include README.md LICENSE
