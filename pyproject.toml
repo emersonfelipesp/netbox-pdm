@@ -7,7 +7,7 @@ include = ["netbox_pdm*"]
 
 [project]
 name = "netbox-pdm"
-version = "0.0.1"
+version = "0.0.1rc1"
 description = "NetBox plugin for Proxmox Datacenter Manager (PDM) inventory through proxbox-api"
 readme = "README.md"
 requires-python = ">=3.12"
