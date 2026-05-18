@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from netbox.plugins import PluginConfig
 
-__version__ = "0.0.1rc1"
+__version__ = "0.0.1rc2"
 
 
 class NetBoxPDMConfig(PluginConfig):
