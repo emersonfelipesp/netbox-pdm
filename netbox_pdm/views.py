@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from django.shortcuts import render
-from utilities.views import ConditionalLoginRequiredMixin
 from django.views.generic import View
+from utilities.views import ConditionalLoginRequiredMixin
 
 
 class PDMHomeView(ConditionalLoginRequiredMixin, View):
