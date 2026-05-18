@@ -16,7 +16,7 @@ authors = [
     {name = "Emerson Felipe", email = "emersonfelipe.2003@gmail.com"},
 ]
 dependencies = [
-    "netbox-proxbox>=0.0.16",
+    "netbox-proxbox==0.0.16.post5",
     "requests>=2.33.0",
 ]
 
