@@ -46,7 +46,7 @@ jobs:
             -v "$PWD/dist:/dist:ro" \
             "$NETBOX_IMAGE" \
             sh -c '
-              /opt/netbox/venv/bin/pip install --no-deps /dist/*.whl &&
+              uv pip install --python /opt/netbox/venv/bin/python --no-deps /dist/*.whl &&
               /opt/netbox/venv/bin/python -c "import netbox_pdm; print(netbox_pdm.__name__)"
             '
 
