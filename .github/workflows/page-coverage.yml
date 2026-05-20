@@ -66,7 +66,7 @@ jobs:
           docker pull "${NETBOX_IMAGE}"
 
           docker run -d --name netbox-e2e --network netbox-pdm-e2e -p "18080:8080" \
-            -v "$PWD:/tmp/netbox-pdm:ro" \
+            -v "$PWD:/tmp/netbox-pdm" \
             -e DB_HOST=netbox-e2e-postgres \
             -e DB_NAME=netbox \
             -e DB_USER=netbox \
