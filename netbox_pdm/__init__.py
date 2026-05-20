@@ -33,5 +33,8 @@ class NetBoxPDMConfig(PluginConfig):
         "proxbox_api_key": "",
     }
 
+    def ready(self) -> None:
+        super().ready()
+
 
 config = NetBoxPDMConfig
