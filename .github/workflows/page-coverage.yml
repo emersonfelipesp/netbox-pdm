@@ -19,7 +19,7 @@ jobs:
   page-coverage:
     name: Page Coverage / netboxcommunity/netbox:v4.6.1 / local
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 70
 
     steps:
       - name: Checkout repository
@@ -91,11 +91,11 @@ jobs:
       - name: Wait for NetBox readiness and create API token
         run: |
           set -eux
-          for i in $(seq 1 900); do
+          for i in $(seq 1 1500); do
             http_code="$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' "http://${TEST_HOST}:18080/api/" 2>/dev/null || true)"
             if [ "$http_code" -ge 100 ] 2>/dev/null && [ "$http_code" -lt 500 ]; then break; fi
             sleep 2
-            [ "$i" -eq 900 ] && { echo "NetBox did not become ready"; docker logs netbox-e2e; exit 1; }
+            [ "$i" -eq 1500 ] && { echo "NetBox did not become ready"; docker logs netbox-e2e; exit 1; }
           done
           TOKEN_OUTPUT=$(docker exec netbox-e2e /opt/netbox/venv/bin/python /opt/netbox/netbox/manage.py shell -c \
             "from users.models import Token, User; u=User.objects.get(username='admin'); t=Token.objects.create(user=u, version=1, token='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'); print(f'{t.id}:{t.plaintext}')")
