@@ -31,6 +31,10 @@ docs = [
     "mkdocstrings[python]>=0.27",
     "ghp-import>=2.1",
 ]
+screenshot = [
+    "playwright>=1.58.0",
+    "requests>=2.33.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/emersonfelipesp/netbox-pdm"
