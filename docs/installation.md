@@ -2,9 +2,9 @@
 
 ## Requirements
 
-- NetBox 4.5.x – 4.6.x
+- NetBox 4.5.8 through 4.6.x
 - Python 3.12+
-- [`netbox-proxbox`](https://github.com/emersonfelipesp/netbox-proxbox) `>=0.0.16`
+- [`netbox-proxbox`](https://github.com/emersonfelipesp/netbox-proxbox) `>=0.0.18,<0.1.0`
 - A reachable [`proxbox-api`](https://github.com/emersonfelipesp/proxbox-api)
   instance with PDM-aware endpoints
 
