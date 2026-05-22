@@ -11,6 +11,13 @@ job conventions.
 
 ## Scope
 
-v0.0.1 is a **scaffold** release: NetBox plugin registration, navigation,
-overview page, packaging, docs, tests, and CI pipelines. Models and sync
-views land in subsequent releases.
+v0.0.1.post1 is a **scaffold** release: NetBox plugin registration,
+navigation, overview page, packaging, docs, tests, and CI pipelines. Models and
+sync views land in subsequent releases.
+
+## Compatibility
+
+| NetBox | netbox-pdm | netbox-proxbox | Python |
+| --- | --- | --- | --- |
+| v4.5.8 | v0.0.1.post1 | >=0.0.18,<0.1.0 | 3.12+ |
+| v4.6.1 | v0.0.1.post1 | >=0.0.18,<0.1.0 | 3.12+ |
