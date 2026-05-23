@@ -1,0 +1,115 @@
+name: Page Coverage
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  NETBOX_IMAGE: netboxcommunity/netbox:v4.6.1
+  SECRET_KEY: netbox-pdm-e2e-secret-key-netbox-pdm-e2e-secret-key-netbox-pdm-e2e-secret-key
+
+concurrency:
+  group: page-coverage-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  page-coverage:
+    name: Page Coverage / netboxcommunity/netbox:v4.6.1 / local
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install test dependencies
+        run: python -m pip install --upgrade pip requests
+
+      - name: Start E2E stack
+        run: |
+          set -eux
+          docker network create netbox-pdm-e2e || true
+          TEST_HOST="127.0.0.1"
+          echo "TEST_HOST=${TEST_HOST}" >> "$GITHUB_ENV"
+
+          docker rm -f netbox-e2e-postgres netbox-e2e-redis netbox-e2e 2>/dev/null || true
+
+          docker run -d --name netbox-e2e-postgres --network netbox-pdm-e2e \
+            -e POSTGRES_DB=netbox \
+            -e POSTGRES_USER=netbox \
+            -e POSTGRES_PASSWORD=netbox \
+            --health-cmd="pg_isready -U netbox -d netbox" \
+            --health-interval=2s \
+            --health-timeout=2s \
+            --health-retries=30 \
+            postgres:16-alpine
+
+          docker run -d --name netbox-e2e-redis --network netbox-pdm-e2e \
+            redis:7-alpine
+
+          for i in $(seq 1 60); do
+            health="$(docker inspect --format '{{.State.Health.Status}}' netbox-e2e-postgres 2>/dev/null || echo unknown)"
+            [ "$health" = "healthy" ] && break
+            sleep 1
+            [ "$i" -eq 60 ] && { echo "postgres did not become healthy"; docker logs netbox-e2e-postgres; exit 1; }
+          done
+
+          docker pull "${NETBOX_IMAGE}"
+
+          docker run -d --name netbox-e2e --network netbox-pdm-e2e -p "18080:8080" \
+            -v "$PWD:/tmp/netbox-pdm" \
+            -e DB_HOST=netbox-e2e-postgres \
+            -e DB_NAME=netbox \
+            -e DB_USER=netbox \
+            -e DB_PASSWORD=netbox \
+            -e DB_WAIT_DEBUG=1 \
+            -e REDIS_HOST=netbox-e2e-redis \
+            -e REDIS_DATABASE=0 \
+            -e REDIS_CACHE_HOST=netbox-e2e-redis \
+            -e REDIS_CACHE_DATABASE=1 \
+            -e REDIS_TASK_HOST=netbox-e2e-redis \
+            -e REDIS_TASK_DATABASE=2 \
+            -e SECRET_KEY="$SECRET_KEY" \
+            -e SUPERUSER_NAME=admin \
+            -e SUPERUSER_EMAIL=admin@example.com \
+            -e SUPERUSER_PASSWORD=admin \
+            -e ALLOWED_HOSTS="* localhost 127.0.0.1 ::1 netbox" \
+            -e LOGIN_REQUIRED=True \
+            --entrypoint /bin/bash \
+            "${NETBOX_IMAGE}" -ec \
+              "i=0; until uv pip install --upgrade /tmp/netbox-pdm; do i=\$((i+1)); [ \$i -ge 30 ] && exit 1; sleep 10; done && mkdir -p /etc/netbox/config && printf 'PLUGINS = [\"netbox_proxbox\", \"netbox_pdm\"]\n' > /etc/netbox/config/plugins.py && /opt/netbox/docker-entrypoint.sh /opt/netbox/launch-netbox.sh"
+
+      - name: Wait for NetBox readiness and create API token
+        run: |
+          set -eux
+          for i in $(seq 1 3000); do
+            http_code="$(curl -sS --max-time 5 -o /dev/null -w '%{http_code}' "http://${TEST_HOST}:18080/api/" 2>/dev/null || true)"
+            if [ "$http_code" -ge 100 ] 2>/dev/null && [ "$http_code" -lt 500 ]; then break; fi
+            sleep 2
+            [ "$i" -eq 3000 ] && { echo "NetBox did not become ready"; docker logs netbox-e2e; exit 1; }
+          done
+          TOKEN_OUTPUT=$(docker exec netbox-e2e /opt/netbox/venv/bin/python /opt/netbox/netbox/manage.py shell -c \
+            "from users.models import Token, User; u=User.objects.get(username='admin'); t=Token.objects.create(user=u, version=1, token='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'); print(f'{t.id}:{t.plaintext}')")
+          TOKEN_VALUE=$(printf '%s' "$TOKEN_OUTPUT" | tail -n 1 | cut -d: -f2)
+          echo "NETBOX_API_TOKEN=$TOKEN_VALUE" >> "$GITHUB_ENV"
+
+      - name: Run page coverage check
+        env:
+          NETBOX_BASE_URL: http://${{ env.TEST_HOST }}:18080
+          NETBOX_API_TOKEN: ${{ env.NETBOX_API_TOKEN }}
+        run: python tests/e2e/page_coverage_check.py
+
+      - name: Dump Docker logs on failure
+        if: failure()
+        run: |
+          echo "=== netbox-e2e ==="
+          docker logs netbox-e2e 2>&1 | tail -100 || true

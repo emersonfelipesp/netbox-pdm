@@ -11,18 +11,23 @@ on:
         description: "NetBox Docker image to test against"
         required: false
         type: string
-        default: "netboxcommunity/netbox:v4.6.0"
+        default: "netboxcommunity/netbox:v4.6.1"
 
 permissions:
   contents: read
 
-env:
-  NETBOX_IMAGE: ${{ inputs.netbox_image || 'netboxcommunity/netbox:v4.6.0' }}
-
 jobs:
   e2e-docker:
-    name: NetBox plugin install + smoke
+    name: NetBox plugin install + smoke / ${{ matrix.netbox_image }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        netbox_image:
+          - netboxcommunity/netbox:v4.5.8
+          - netboxcommunity/netbox:v4.6.1
+    env:
+      NETBOX_IMAGE: ${{ inputs.netbox_image || matrix.netbox_image }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6

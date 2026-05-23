@@ -41,3 +41,9 @@ jobs:
 
       - name: Pytest
         run: pytest --cov=netbox_pdm --cov-report=term-missing --cov-report=xml tests
+
+      - name: Build and validate package metadata
+        run: |
+          python -m pip install build twine
+          python -m build
+          python -m twine check dist/*
