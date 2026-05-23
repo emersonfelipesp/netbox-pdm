@@ -16,13 +16,9 @@ that plugin is installed, and falls back to its own `proxbox_api_url` /
 Model and sync views land in upcoming releases. The plugin is **read-only**:
 all mutations remain in PDM.
 
-## Requirements
+## Compatibility
 
-- NetBox 4.5.x – 4.6.x
-- Python 3.12+
-- [`netbox-proxbox`](https://github.com/emersonfelipesp/netbox-proxbox) `>= 0.0.16`
-- A reachable [`proxbox-api`](https://github.com/emersonfelipesp/proxbox-api)
-  instance with PDM-aware endpoints enabled
+See [COMPATIBILITY.md](COMPATIBILITY.md) for the full version compatibility table.
 
 ## Installation
 
