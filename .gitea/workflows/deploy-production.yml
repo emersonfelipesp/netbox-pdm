@@ -1,0 +1,25 @@
+name: Deploy to production (netbox.nmulti.cloud)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to deploy (tag or branch, default: main)'
+        required: false
+        default: 'main'
+
+jobs:
+  deploy:
+    name: Deploy plugin
+    runs-on: prod-deploy
+    steps:
+      - name: Deploy plugin
+        run: |
+          REF="${{ inputs.ref || github.sha }}"
+          ssh -o StrictHostKeyChecking=no \
+              -o ServerAliveInterval=30 \
+              -o ServerAliveCountMax=20 \
+              nmc-prod-207 -- deploy-plugin netbox-pdm ${REF}
