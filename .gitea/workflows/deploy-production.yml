@@ -25,4 +25,4 @@ jobs:
             v[0-9]*.[0-9]*.[0-9]* | main | develop | [a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9]*) ;;
             *) echo "ERROR: Invalid ref format: $REF"; exit 1 ;;
           esac
-          ssh -o StrictHostKeyChecking=accept-new               -o ServerAliveInterval=30               -o ServerAliveCountMax=20               nmc-prod-207 -- deploy-plugin pdm "$REF"
+          ssh -o StrictHostKeyChecking=accept-new               -o ServerAliveInterval=30               -o ServerAliveCountMax=20               nmc-prod-207 -- deploy-plugin netbox-pdm "$REF"
