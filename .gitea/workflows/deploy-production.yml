@@ -19,10 +19,18 @@ jobs:
       REF: ${{ inputs.ref || github.sha }}
     steps:
       - name: Deploy plugin
+        shell: bash
         run: |
           # Validate ref format defensively (accepts tags, branches, and commit shas)
           case "$REF" in
             v[0-9]*.[0-9]*.[0-9]* | main | develop | [a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9]*) ;;
             *) echo "ERROR: Invalid ref format: $REF"; exit 1 ;;
           esac
-          ssh -o StrictHostKeyChecking=accept-new               -o ServerAliveInterval=30               -o ServerAliveCountMax=20               nmc-prod-207 -- deploy-plugin netbox-pdm "$REF"
+          if [[ -x /opt/nmulticloud/deploy/bin/deploy-netbox-plugin ]]; then
+            /opt/nmulticloud/deploy/bin/deploy-netbox-plugin pdm "$REF"
+          else
+            ssh -o StrictHostKeyChecking=accept-new \
+                -o ServerAliveInterval=30 \
+                -o ServerAliveCountMax=20 \
+                nmc-prod-207 -- deploy-plugin pdm "$REF"
+          fi
