@@ -35,15 +35,19 @@ See the plugin's code structure:
 - `netbox-pdm_plugin/templates/` — Django HTML templates
 - `tests/` — unit and integration tests
 
-## Automatic Production Deployment
+## Automatic Staging/Production Deployment
 
-**Starting with the deploy-production workflow**, new commits to `main` automatically deploy to `netbox.nmulti.cloud`.
+The deploy workflow treats `develop` as staging and `main` as production.
+Pushes to `develop` deploy `netbox-pdm` to
+`https://staging.netbox.nmulti.cloud`; pushes to `main` deploy to
+`https://netbox.nmulti.cloud`.
 
 **Deploy job in `.gitea/workflows/deploy-production.yml`:**
-- Triggers on `push: [main]` branch updates
-- Also supports manual dispatch via `workflow_dispatch` with optional `ref` input
-- Runs on `prod-deploy` runner with SSH access to production host
-- Executes: `ssh nmc-prod-207 -- deploy-plugin pdm "$REF"`
+- Triggers on `push: [develop, main]` branch updates
+- Also supports manual dispatch via `workflow_dispatch` with optional `ref` and optional `environment` choice
+- Runs on `prod-deploy` runner with access to the NetBox deploy host
+- For staging, executes `/opt/nmulticloud/deploy/bin/deploy-netbox-plugin-staging netbox-pdm "$REF"`
+- For production, executes `/opt/nmulticloud/deploy/bin/deploy-netbox-plugin pdm "$REF"` when local, or falls back to `ssh nmc-prod-207 -- deploy-plugin pdm "$REF"`
 
 **Deploy parameters:**
 - REF: can be a version tag (v0.1.0), branch name (main/develop), or 7+ character commit SHA
@@ -55,26 +59,26 @@ See the plugin's code structure:
 - StrictHostKeyChecking=accept-new prevents MITM attacks
 - Quoted variable interpolation prevents shell injection
 
-**Deployment on production server (`nmc-prod-207`):**
+**Deployment on target server (`nmc-prod-207`):**
 1. Git fetch/checkout of the specified ref in the plugin submodule
 2. pip install -e to refresh editable install and pick up new dependencies
 3. manage.py migrate to apply any pending migrations
 4. manage.py collectstatic to collect new/updated static files
-5. systemctl reload netbox-production (graceful gunicorn reload)
-6. systemctl restart netbox-rq (RQ worker restart for code changes)
-7. Health check: curl -sf http://127.0.0.1:18001/api/ to verify service is responding
+5. Reload/restart the target NetBox web and worker services
+6. Health check the selected endpoint to verify the service is responding
 
 **Monitoring and verification:**
 - Watch the `deploy-production.yml` workflow run in Gitea Actions
 - Check the `deploy` job logs for SSH output and health check results
-- Verify production is healthy: `ssh nmc-prod-207 -- health netbox`
+- Verify staging: `curl -fsS https://staging.netbox.nmulti.cloud/api/`
+- Verify production: `curl -fsS https://netbox.nmulti.cloud/api/`
 - Check service logs: `ssh nmc-prod-207 -- logs netbox`
 
 **Manual deployment trigger:**
 ```bash
 # Deploy a specific tag or branch via workflow dispatch
 nms git actions run netbox-pdm .gitea/workflows/deploy-production.yml \
-  -r main -f ref=v0.1.0
+  -r main -f environment=production -f ref=v0.1.0
 
 # Or SSH directly to production
 ssh nmc-prod-207 -- deploy-plugin pdm v0.1.0
