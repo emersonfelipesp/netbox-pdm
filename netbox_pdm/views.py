@@ -54,10 +54,18 @@ class PDMEndpointView(generic.ObjectView):
         return {"remotes_table": remotes_table}
 
 
+@register_model_view(PDMEndpoint, "add", path="add", detail=False)
+class PDMEndpointAddView(generic.ObjectEditView):
+    queryset = PDMEndpoint.objects.all()
+    form = PDMEndpointForm
+    default_return_url = "plugins:netbox_pdm:pdmendpoint_list"
+
+
 @register_model_view(PDMEndpoint, "edit")
 class PDMEndpointEditView(generic.ObjectEditView):
     queryset = PDMEndpoint.objects.all()
     form = PDMEndpointForm
+    default_return_url = "plugins:netbox_pdm:pdmendpoint_list"
 
 
 @register_model_view(PDMEndpoint, "delete")
