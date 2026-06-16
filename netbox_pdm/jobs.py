@@ -129,21 +129,26 @@ class PDMSyncJob(JobRunner):
 
     @classmethod
     def enqueue(cls, *args, instance=None, **kwargs):
-        endpoint_pk = kwargs.pop("endpoint_pk", None)
+        # Keep endpoint_pk in kwargs so it flows through RQ to run(**kwargs),
+        # AND persist it in job.data for UI inspection.
         kwargs.setdefault("job_timeout", PDM_SYNC_JOB_TIMEOUT)
+        endpoint_pk = kwargs.get("endpoint_pk")
         job = super().enqueue(*args, instance=instance, **kwargs)
-        data = job.data or {}
         if endpoint_pk is not None:
+            data = job.data or {}
             data["endpoint_pk"] = endpoint_pk
-        job.data = data
-        job.save(update_fields=["data"])
+            job.data = data
+            job.save(update_fields=["data"])
         return job
 
     def run(self, *args: object, **kwargs: object) -> None:
         from netbox_proxbox.models import PDMEndpoint
 
-        raw_data = self.job.data or {}
-        endpoint_pk = raw_data.get("endpoint_pk")
+        # Prefer kwargs (passed directly through RQ), fall back to job.data.
+        endpoint_pk = kwargs.get("endpoint_pk")
+        if endpoint_pk is None:
+            self.job.refresh_from_db(fields=["data"])
+            endpoint_pk = (self.job.data or {}).get("endpoint_pk")
         if endpoint_pk is None:
             raise RuntimeError("PDMSyncJob requires endpoint_pk in job data.")
 
