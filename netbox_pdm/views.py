@@ -16,6 +16,7 @@ from netbox_pdm.forms import (
     PDMEndpointFilterForm,
     PDMEndpointForm,
     PDMRemoteFilterForm,
+    PDMRemoteForm,
 )
 from netbox_pdm.jobs import PDMSyncJob
 from netbox_pdm.tables import PDMEndpointTable, PDMRemoteTable
@@ -112,3 +113,23 @@ class PDMRemoteView(generic.ObjectView):
         "linked_proxmox_endpoint",
         "linked_pbs_endpoint",
     )
+
+
+@register_model_view(PDMRemote, "add", path="add", detail=False)
+class PDMRemoteAddView(generic.ObjectEditView):
+    queryset = PDMRemote.objects.all()
+    form = PDMRemoteForm
+    default_return_url = "plugins:netbox_pdm:pdmremote_list"
+
+
+@register_model_view(PDMRemote, "edit")
+class PDMRemoteEditView(generic.ObjectEditView):
+    queryset = PDMRemote.objects.all()
+    form = PDMRemoteForm
+    default_return_url = "plugins:netbox_pdm:pdmremote_list"
+
+
+@register_model_view(PDMRemote, "delete")
+class PDMRemoteDeleteView(generic.ObjectDeleteView):
+    queryset = PDMRemote.objects.all()
+    default_return_url = "plugins:netbox_pdm:pdmremote_list"
