@@ -56,11 +56,15 @@ def _pdm_base_url(endpoint: object) -> str:
 
 
 def _fetch_pdm_remotes(endpoint: object, log: logging.Logger) -> list[dict]:
-    """Call GET /remotes on the PDM endpoint and return raw remote dicts."""
+    """Call GET /remotes/remote on the PDM endpoint and return raw remote dicts.
+
+    PDM 1.x uses /api2/json/remotes/remote for the combined PVE+PBS remote list.
+    The top-level /api2/json/remotes returns a subdir index, not the remote list.
+    """
     session = _build_pdm_session(endpoint)
     base = _pdm_base_url(endpoint)
     timeout = endpoint.timeout or 30
-    resp = session.get(f"{base}/remotes", timeout=timeout)
+    resp = session.get(f"{base}/remotes/remote", timeout=timeout)
     resp.raise_for_status()
     data = resp.json()
     remotes = data.get("data", [])
