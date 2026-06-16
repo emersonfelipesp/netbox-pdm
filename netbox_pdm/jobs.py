@@ -52,8 +52,7 @@ def _pdm_base_url(endpoint: object) -> str:
     )
     if not host:
         raise ValueError(f"PDMEndpoint pk={endpoint.pk} has no host or IP address.")
-    scheme = "https" if endpoint.verify_ssl else "http"
-    return f"{scheme}://{host}:{endpoint.port}/api2/json"
+    return f"https://{host}:{endpoint.port}/api2/json"
 
 
 def _fetch_pdm_remotes(endpoint: object, log: logging.Logger) -> list[dict]:
