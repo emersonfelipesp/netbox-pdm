@@ -8,7 +8,7 @@ include = ["netbox_pdm*"]
 [project]
 name = "netbox-pdm"
 version = "0.0.2"
-description = "NetBox plugin for Proxmox Datacenter Manager (PDM) inventory through proxbox-api"
+description = "NetBox plugin for Proxmox Datacenter Manager (PDM) inventory via proxmox-sdk"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
@@ -31,7 +31,7 @@ classifiers = [
 ]
 dependencies = [
     "netbox-proxbox>=0.0.18,<0.1.0",
-    "requests>=2.33.0",
+    "proxmox-sdk>=0.0.12",
 ]
 
 [project.optional-dependencies]
