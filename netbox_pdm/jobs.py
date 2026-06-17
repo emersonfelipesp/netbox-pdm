@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
 
 from netbox.constants import RQ_QUEUE_DEFAULT
 from netbox.jobs import JobRunner
@@ -14,82 +13,83 @@ PDM_SYNC_QUEUE_NAME = RQ_QUEUE_DEFAULT
 __all__ = ("PDMSyncJob",)
 
 
-def _build_pdm_session(endpoint: object) -> object:
-    """Build a requests.Session pre-configured with PDM API token auth.
+def _make_pdm_client(endpoint: object) -> object:
+    """Construct a :class:`~proxmox_sdk.pdm.client.SyncPDMClient` for *endpoint*.
 
-    PDM token format differs from PVE: separator is `:`, prefix is `PDM`.
-    Header: ``Authorization: PDMAPIToken=user@realm!tokenname:secret``
+    PDM token format: ``user@realm!tokenname:secret`` (separator ``:``, prefix
+    ``PDM``).  :func:`~proxmox_sdk.sdk.auth.token.parse_token_id` splits the
+    ``token_id`` field (e.g. ``root@pam!my-token``) into the ``user`` and
+    ``token_name`` parts that the SDK expects.
 
     TLS verification is always on unless the operator explicitly sets
     ``verify_ssl=False`` on the PDMEndpoint (for self-signed internal CA certs).
-    When disabled, a CRITICAL log entry is emitted — this should only be
-    used in air-gapped/internal deployments where a proper CA cannot be added.
+    When disabled, a CRITICAL log entry is emitted — this should only be used in
+    air-gapped/internal deployments where a proper CA cannot be added.
     """
-    import logging
-    import requests
+    from proxmox_sdk.pdm.client import SyncPDMClient
+    from proxmox_sdk.sdk.auth.token import parse_token_id
 
     log = logging.getLogger(__name__)
-    session = requests.Session()
-    auth_header = f"PDMAPIToken={endpoint.token_id}:{endpoint.token_secret}"
-    session.headers["Authorization"] = auth_header
-    session.headers["Accept"] = "application/json"
+
+    host = endpoint.domain or (
+        str(endpoint.ip_address.address.ip) if endpoint.ip_address else None
+    )
+    if not host:
+        raise ValueError(f"PDMEndpoint pk={endpoint.pk} has no host or IP address.")
+
+    user, token_name = parse_token_id(endpoint.token_id)
+
     if not endpoint.verify_ssl:
-        import urllib3
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        session.verify = False
         log.critical(
             "PDMEndpoint '%s': TLS verification DISABLED (verify_ssl=False). "
             "This allows MITM attacks. Add the server CA to your trust store "
             "or issue a proper certificate for production use.",
             endpoint,
         )
-    return session
 
-
-def _pdm_base_url(endpoint: object) -> str:
-    host = endpoint.domain or (
-        str(endpoint.ip_address.address.ip) if endpoint.ip_address else None
+    return SyncPDMClient(
+        host=host,
+        user=user,
+        token_name=token_name,
+        token_value=endpoint.token_secret,
+        port=endpoint.port,
+        verify_ssl=endpoint.verify_ssl,
+        timeout=endpoint.timeout or 30,
     )
-    if not host:
-        raise ValueError(f"PDMEndpoint pk={endpoint.pk} has no host or IP address.")
-    return f"https://{host}:{endpoint.port}/api2/json"
 
 
-def _fetch_pdm_remotes(endpoint: object, log: logging.Logger) -> list[dict]:
-    """Call GET /remotes/remote on the PDM endpoint and return raw remote dicts.
+def _fetch_pdm_remotes(endpoint: object, log: logging.Logger) -> list:
+    """Return typed ``PDMRemote`` objects from the PDM endpoint.
 
-    PDM 1.x uses /api2/json/remotes/remote for the combined PVE+PBS remote list.
-    The top-level /api2/json/remotes returns a subdir index, not the remote list.
+    Uses :class:`~proxmox_sdk.pdm.client.SyncPDMClient` with the fully typed
+    :class:`~proxmox_sdk.pdm.domains.remotes.RemotesDomain` so all PDM API
+    path correctness and response parsing is handled by the SDK.
     """
-    session = _build_pdm_session(endpoint)
-    base = _pdm_base_url(endpoint)
-    timeout = endpoint.timeout or 30
-    resp = session.get(f"{base}/remotes/remote", timeout=timeout)
-    resp.raise_for_status()
-    data = resp.json()
-    remotes = data.get("data", [])
+    with _make_pdm_client(endpoint) as client:
+        remotes = client.remotes.list()
     log.info("PDM %s returned %d remotes.", endpoint, len(remotes))
     return remotes
 
 
-def _sync_remotes(endpoint: object, raw_remotes: list[dict], log: logging.Logger) -> dict:
-    """Reconcile raw PDM remote dicts into NetBox PDMRemote records."""
+def _sync_remotes(endpoint: object, remotes: list, log: logging.Logger) -> dict:
+    """Reconcile typed PDM remote objects into NetBox ``PDMRemote`` records."""
     from django.utils.timezone import now
-    from netbox_proxbox.models import PDMRemote
+    from netbox_proxbox.models import PDMRemote as PDMRemoteRecord
 
     created = updated = 0
-    seen_names: set[str] = set()
 
-    for raw in raw_remotes:
-        remote_name = raw.get("id") or raw.get("name")
+    for remote in remotes:
+        remote_name = remote.id
         if not remote_name:
-            log.warning("Skipping PDM remote with no id/name: %s", raw)
+            log.warning("Skipping PDM remote with no id: %s", remote)
             continue
-        remote_type = raw.get("type", "pve")
-        nodes = raw.get("nodes") or []
-        hostname = nodes[0].get("hostname", "") if nodes else ""
-        fingerprint = nodes[0].get("fingerprint", "") if nodes else (raw.get("fingerprint") or "")
-        seen_names.add(remote_name)
+
+        remote_type = remote.type or "pve"
+        nodes = remote.nodes or []
+        hostname = nodes[0].hostname if nodes else ""
+        fingerprint = (
+            (nodes[0].fingerprint or "") if nodes else (remote.fingerprint or "")
+        )
 
         defaults = {
             "type": remote_type,
@@ -98,7 +98,7 @@ def _sync_remotes(endpoint: object, raw_remotes: list[dict], log: logging.Logger
             "version": "",
             "last_seen_at": now(),
         }
-        obj, new = PDMRemote.objects.update_or_create(
+        _obj, new = PDMRemoteRecord.objects.update_or_create(
             pdm_endpoint=endpoint,
             name=remote_name,
             defaults=defaults,
@@ -110,7 +110,7 @@ def _sync_remotes(endpoint: object, raw_remotes: list[dict], log: logging.Logger
             updated += 1
             log.debug("Updated PDMRemote '%s'.", remote_name)
 
-    return {"created": created, "updated": updated, "total": len(raw_remotes)}
+    return {"created": created, "updated": updated, "total": len(remotes)}
 
 
 class PDMSyncJob(JobRunner):
@@ -163,8 +163,8 @@ class PDMSyncJob(JobRunner):
 
         self.logger.info("Starting PDM sync for endpoint '%s'.", endpoint)
 
-        raw_remotes = _fetch_pdm_remotes(endpoint, self.logger)
-        result = _sync_remotes(endpoint, raw_remotes, self.logger)
+        remotes = _fetch_pdm_remotes(endpoint, self.logger)
+        result = _sync_remotes(endpoint, remotes, self.logger)
 
         data = self.job.data or {}
         data["result"] = result
