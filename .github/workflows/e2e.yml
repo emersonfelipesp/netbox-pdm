@@ -11,7 +11,7 @@ on:
         description: "NetBox Docker image to test against"
         required: false
         type: string
-        default: "netboxcommunity/netbox:v4.6.1"
+        default: "netboxcommunity/netbox:v4.6.3"
 
 permissions:
   contents: read
@@ -25,7 +25,11 @@ jobs:
       matrix:
         netbox_image:
           - netboxcommunity/netbox:v4.5.8
+          - netboxcommunity/netbox:v4.5.9
+          - netboxcommunity/netbox:v4.6.0
           - netboxcommunity/netbox:v4.6.1
+          - netboxcommunity/netbox:v4.6.2
+          - netboxcommunity/netbox:v4.6.3
     env:
       NETBOX_IMAGE: ${{ inputs.netbox_image || matrix.netbox_image }}
     steps:

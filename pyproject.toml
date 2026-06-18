@@ -30,7 +30,6 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "netbox-proxbox>=0.0.18,<0.1.0",
     "proxmox-sdk>=0.0.12",
 ]
 
