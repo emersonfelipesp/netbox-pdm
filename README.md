@@ -9,14 +9,15 @@ remotes, views, and SDN-adjacent state — into NetBox through the
 reuses `netbox-proxbox` FastAPI endpoint resolution and job conventions when
 that plugin is installed, and falls back to its own `proxbox_api_url` /
 `proxbox_api_key` plugin settings otherwise.
+`netbox-proxbox` remains a required NetBox peer plugin in `PLUGINS`, but is not
+installed as a Python wheel dependency so the Proxbox stack can resolve one
+shared Pydantic line with `proxmox-sdk`.
 
 ## Status
 
-`netbox-pdm` v0.0.1.post1 ships the plugin scaffold and NetBox installation
-glue. Model and sync views land in upcoming releases. The plugin is
-**read-only**: all mutations remain in PDM. This post release normalizes
-certification evidence, packaging metadata, and compatibility documentation
-without changing runtime behavior.
+`netbox-pdm` v0.0.2 ships read-only PDM endpoint and remote inventory views,
+sync job wiring, and the proxmox-sdk-backed PDM client path. The plugin is
+**read-only**: all mutations remain in PDM.
 
 ## Compatibility
 
@@ -25,7 +26,7 @@ See [COMPATIBILITY.md](COMPATIBILITY.md) for the full version compatibility tabl
 ## Installation
 
 ```bash
-pip install netbox-pdm
+pip install netbox-proxbox netbox-pdm
 ```
 
 In `configuration.py`:
@@ -56,7 +57,8 @@ Use GitHub Issues for bugs and feature requests:
 Certification evidence is tracked in [CERTIFICATION.md](./CERTIFICATION.md).
 The repository includes Apache-2.0 licensing, PyPI metadata, compatibility
 metadata, GitHub Actions CI, release validation, docs publishing, screenshot
-capture, and page-coverage workflows for NetBox v4.6.1.
+capture, and page-coverage workflows for NetBox v4.6.3. Docker install smoke
+coverage spans NetBox v4.5.8, v4.5.9, and v4.6.0 through v4.6.3.
 
 ## License
 

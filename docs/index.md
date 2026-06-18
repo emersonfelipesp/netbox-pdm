@@ -8,16 +8,22 @@ into NetBox through the
 [`netbox-proxbox`](https://github.com/emersonfelipesp/netbox-proxbox) and
 reuses its backend context, branch lifecycle, endpoint relationships, and
 job conventions.
+Install `netbox-proxbox` alongside `netbox-pdm` as a NetBox peer plugin; PDM
+keeps only `proxmox-sdk` in its Python dependency set so stack installs can
+resolve one shared Pydantic minor line.
 
 ## Scope
 
-v0.0.1.post1 is a **scaffold** release: NetBox plugin registration,
-navigation, overview page, packaging, docs, tests, and CI pipelines. Models and
-sync views land in subsequent releases.
+v0.0.2 provides read-only PDM endpoint and remote inventory views, sync job
+wiring, packaging, docs, tests, and CI pipelines.
 
 ## Compatibility
 
 | NetBox | netbox-pdm | netbox-proxbox | Python |
 | --- | --- | --- | --- |
-| v4.5.8 | v0.0.1.post1 | >=0.0.18,<0.1.0 | 3.12+ |
-| v4.6.1 | v0.0.1.post1 | >=0.0.18,<0.1.0 | 3.12+ |
+| v4.5.8 | v0.0.2 | >=0.0.18,<0.1.0 | 3.12+ |
+| v4.5.9 | v0.0.2 | >=0.0.18,<0.1.0 | 3.12+ |
+| v4.6.0 | v0.0.2 | >=0.0.18,<0.1.0 | 3.12+ |
+| v4.6.1 | v0.0.2 | >=0.0.18,<0.1.0 | 3.12+ |
+| v4.6.2 | v0.0.2 | >=0.0.18,<0.1.0 | 3.12+ |
+| v4.6.3 | v0.0.2 | >=0.0.18,<0.1.0 | 3.12+ |
