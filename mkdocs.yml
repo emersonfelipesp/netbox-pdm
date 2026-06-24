@@ -1,5 +1,5 @@
 site_name: netbox-pdm
-site_description: NetBox plugin for Proxmox Datacenter Manager inventory through proxbox-api
+site_description: NetBox plugin for Proxmox Datacenter Manager remote inventory via proxmox-sdk
 site_url: https://emersonfelipesp.github.io/netbox-pdm/
 repo_name: emersonfelipesp/netbox-pdm
 repo_url: https://github.com/emersonfelipesp/netbox-pdm
@@ -57,8 +57,11 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Installation: installation.md
+  - Architecture: architecture.md
+  - Configuration: configuration.md
   - Certification: certification.md
   - Release Notes:
       - Summary: release-notes/index.md
+      - Version 0.0.2: release-notes/version-0.0.2.md
       - Version 0.0.1.post1: release-notes/version-0.0.1.post1.md
   - Roadmap: roadmap.md

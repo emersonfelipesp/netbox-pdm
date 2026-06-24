@@ -1,21 +1,43 @@
 # netbox-pdm
 
-NetBox plugin that reflects **Proxmox Datacenter Manager (PDM)** inventory
-into NetBox through the
-[`proxbox-api`](https://github.com/emersonfelipesp/proxbox-api) backend.
+NetBox plugin that reflects **Proxmox Datacenter Manager (PDM)** remotes
+(PVE clusters and PBS instances federated by PDM) into NetBox.
 
-`netbox-pdm` is a sibling plugin of
-[`netbox-proxbox`](https://github.com/emersonfelipesp/netbox-proxbox) and
-reuses its backend context, branch lifecycle, endpoint relationships, and
-job conventions.
-Install `netbox-proxbox` alongside `netbox-pdm` as a NetBox peer plugin; PDM
-keeps only `proxmox-sdk` in its Python dependency set so stack installs can
-resolve one shared Pydantic minor line.
+`netbox-pdm` is a companion plugin to
+[`netbox-proxbox`](https://github.com/emersonfelipesp/netbox-proxbox).
+It provides views, sync jobs, forms, tables, and filtersets over the
+`PDMEndpoint` and `PDMRemote` models that are **defined in `netbox-proxbox`**.
+It does **not** require a running `proxbox-api` instance — sync connects
+directly to the PDM API using
+[`proxmox-sdk`](https://github.com/emersonfelipesp/proxmox-sdk).
+
+## How it works
+
+```
+NetBox  (PDMSyncJob — background RQ job)
+    │  SyncPDMClient (proxmox-sdk)
+    ▼
+Proxmox Datacenter Manager API  →  /remotes endpoint
+    │
+    ▼
+PDMRemote rows created/updated in NetBox
+```
+
+The `PDMSyncJob` builds a `SyncPDMClient` from the `PDMEndpoint` credentials
+(token format `user@realm!tokenname:secret`), calls the PDM remotes list,
+and `update_or_create`s `PDMRemote` rows in NetBox.  No `proxbox-api`
+process is required for sync.
 
 ## Scope
 
-v0.0.2 provides read-only PDM endpoint and remote inventory views, sync job
-wiring, packaging, docs, tests, and CI pipelines.
+v0.0.2 delivers:
+
+- Read-only **PDMEndpoint** and **PDMRemote** inventory views: list, detail,
+  edit, delete, and changelog.
+- **PDMSyncJob** background RQ job with per-endpoint dispatch.
+- Optional [**netbox-branching**](https://github.com/netboxlabs/netbox-branching)
+  integration: sync runs inside a branch and merges on success.
+- Packaging, docs, CI pipelines, and certification evidence.
 
 ## Compatibility
 
