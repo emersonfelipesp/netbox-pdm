@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from contextlib import contextmanager
 from typing import Any
 
 from netbox_pdm.models import PdmPluginSettings
@@ -15,6 +16,7 @@ _BRANCHING_UNAVAILABLE = (
 )
 
 __all__ = (
+    "activate_branch_context",
     "branch_has_conflicts",
     "branching_enabled_settings",
     "create_and_provision_branch",
@@ -71,6 +73,17 @@ def branch_has_conflicts(branch: Any) -> bool:
     if lifecycle is None:
         raise NotImplementedError(_BRANCHING_UNAVAILABLE)
     return bool(lifecycle.branch_has_conflicts(branch))
+
+
+@contextmanager
+def activate_branch_context(branch: Any):
+    """Activate a netbox-branching Branch for ORM writes inside the block."""
+    if not is_branching_available():
+        raise NotImplementedError(_BRANCHING_UNAVAILABLE)
+    from netbox_branching.utilities import activate_branch  # noqa: PLC0415
+
+    with activate_branch(branch):
+        yield
 
 
 def merge_branch(

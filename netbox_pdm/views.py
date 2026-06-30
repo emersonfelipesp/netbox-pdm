@@ -7,9 +7,8 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from netbox.views import generic
-from utilities.views import ConditionalLoginRequiredMixin, register_model_view
-
 from netbox_proxbox.models import PDMEndpoint, PDMRemote
+from utilities.views import ConditionalLoginRequiredMixin, register_model_view
 
 from netbox_pdm.filtersets import PDMEndpointFilterSet, PDMRemoteFilterSet
 from netbox_pdm.forms import (
@@ -20,7 +19,6 @@ from netbox_pdm.forms import (
 )
 from netbox_pdm.jobs import PDMSyncJob
 from netbox_pdm.tables import PDMEndpointTable, PDMRemoteTable
-
 
 # ---------------------------------------------------------------------------
 # Home view — redirects to the endpoint list

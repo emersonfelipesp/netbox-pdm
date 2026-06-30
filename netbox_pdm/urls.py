@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from django.urls import include, path
+from utilities.urls import get_model_urls
 
 from netbox_pdm import views  # noqa: F401 — registers views via @register_model_view
 from netbox_pdm.sitemap import SitemapView
-from utilities.urls import get_model_urls
 
 app_name = "netbox_pdm"
 
