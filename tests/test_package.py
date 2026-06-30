@@ -81,3 +81,31 @@ def test_docs_name_supported_netbox_versions() -> None:
 
     for image in SUPPORTED_NETBOX_IMAGES:
         assert image.rsplit(":", 1)[1] in docs
+
+
+def test_pdm_sync_job_persists_result_data() -> None:
+    jobs = (ROOT / "netbox_pdm" / "jobs.py").read_text(encoding="utf-8")
+
+    result_assignment = jobs.index('data["result"] = result')
+    result_save = jobs.index('self.job.save(update_fields=["data"])', result_assignment)
+
+    assert result_save > result_assignment
+
+
+def test_pdm_sync_job_uses_branch_lifecycle_for_orm_reconciliation() -> None:
+    jobs = (ROOT / "netbox_pdm" / "jobs.py").read_text(encoding="utf-8")
+    lifecycle = (
+        ROOT / "netbox_pdm" / "services" / "branch_lifecycle.py"
+    ).read_text(encoding="utf-8")
+
+    for snippet in (
+        "branching_enabled_settings()",
+        "create_and_provision_branch(",
+        "with activate_branch_context(branch):",
+        "merge_branch(",
+        "Leaving branch %s open because PDM sync failed.",
+    ):
+        assert snippet in jobs
+
+    assert '"activate_branch_context"' in lifecycle
+    assert "from netbox_branching.utilities import activate_branch" in lifecycle

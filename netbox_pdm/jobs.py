@@ -3,9 +3,17 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from netbox.constants import RQ_QUEUE_DEFAULT
 from netbox.jobs import JobRunner
+
+from netbox_pdm.services.branch_lifecycle import (
+    activate_branch_context,
+    branching_enabled_settings,
+    create_and_provision_branch,
+    merge_branch,
+)
 
 PDM_SYNC_JOB_TIMEOUT = 600  # 10 minutes
 PDM_SYNC_QUEUE_NAME = RQ_QUEUE_DEFAULT
@@ -141,6 +149,79 @@ class PDMSyncJob(JobRunner):
             job.save(update_fields=["data"])
         return job
 
+    def _create_branch(
+        self,
+        *,
+        endpoint: object,
+        run_started: float,
+        branch_config: dict[str, str],
+    ) -> object:
+        branch_name = (
+            f"{branch_config['prefix']}-{self.job.pk}-{endpoint.pk}-{int(run_started)}"
+        )
+        self.logger.info(
+            "NetBox branching enabled — creating branch %r for PDM sync",
+            branch_name,
+        )
+        try:
+            branch = create_and_provision_branch(
+                name=branch_name,
+                user=getattr(self.job, "user", None),
+            )
+        except Exception as exc:
+            self.logger.error(
+                "Failed to create/provision NetBox branch %s: %s",
+                branch_name,
+                exc,
+            )
+            raise
+
+        data = self.job.data or {}
+        data["branch"] = {
+            "name": branch.name,
+            "schema_id": str(branch.schema_id),
+            "on_conflict": branch_config["on_conflict"],
+        }
+        self.job.data = data
+        self.job.save(update_fields=["data"])
+        self.logger.info("Branch %s ready (schema_id=%s)", branch.name, branch.schema_id)
+        return branch
+
+    def _sync_remotes_in_branch(
+        self,
+        *,
+        endpoint: object,
+        remotes: list,
+        branch: object,
+    ) -> dict:
+        try:
+            with activate_branch_context(branch):
+                return _sync_remotes(endpoint, remotes, self.logger)
+        except Exception:
+            self.logger.exception(
+                "Leaving branch %s open because PDM sync failed.",
+                branch.name,
+            )
+            raise
+
+    def _merge_branch(self, *, branch: object, branch_config: dict[str, str]) -> None:
+        merged, message = merge_branch(
+            branch=branch,
+            user=getattr(self.job, "user", None),
+            on_conflict=branch_config["on_conflict"],
+        )
+        branch_data = (self.job.data or {}).get("branch", {})
+        branch_data["merge_message"] = message
+        branch_data["merged"] = merged
+        data = self.job.data or {}
+        data["branch"] = branch_data
+        self.job.data = data
+        self.job.save(update_fields=["data"])
+        if not merged:
+            self.logger.error(message)
+            raise RuntimeError(message)
+        self.logger.info(message)
+
     def run(self, *args: object, **kwargs: object) -> None:
         from netbox_proxbox.models import PDMEndpoint
 
@@ -161,14 +242,40 @@ class PDMSyncJob(JobRunner):
             self.logger.warning("PDMEndpoint '%s' is disabled — skipping sync.", endpoint)
             return
 
+        run_started = time.monotonic()
         self.logger.info("Starting PDM sync for endpoint '%s'.", endpoint)
 
         remotes = _fetch_pdm_remotes(endpoint, self.logger)
-        result = _sync_remotes(endpoint, remotes, self.logger)
+
+        branch = None
+        branch_config = branching_enabled_settings()
+        if branch_config is not None:
+            branch = self._create_branch(
+                endpoint=endpoint,
+                run_started=run_started,
+                branch_config=branch_config,
+            )
+
+        if branch is not None:
+            result = self._sync_remotes_in_branch(
+                endpoint=endpoint,
+                remotes=remotes,
+                branch=branch,
+            )
+        else:
+            result = _sync_remotes(endpoint, remotes, self.logger)
 
         data = self.job.data or {}
         data["result"] = result
         self.job.data = data
+        self.job.save(update_fields=["data"])
+
+        if branch is not None and branch_config is not None:
+            self._merge_branch(
+                branch=branch,
+                branch_config=branch_config,
+            )
+
         self.logger.info(
             "PDM sync complete for '%s': created=%d updated=%d.",
             endpoint,

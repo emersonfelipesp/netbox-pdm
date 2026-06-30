@@ -108,12 +108,15 @@ PDMSyncJob.enqueue(endpoint_pk=<pk>)
        name=remote_name,
        defaults={type, hostname, fingerprint, version, last_seen_at, ...}
    )
-5. Log result: created / updated counts
+5. Persist `job.data["result"]` and log created / updated counts
 ```
 
 If `branching_enabled` is `True` in `PdmPluginSettings`, the sync runs
 inside a `netbox-branching` branch (prefix from `branch_name_prefix`) and
-merges on success according to `branch_on_conflict`.
+merges on success according to `branch_on_conflict`.  The job fetches data
+from PDM before branch creation, then activates the branch context only while
+reconciling `PDMRemote` rows so the direct ORM writes are isolated correctly.
+If reconciliation fails, the branch is left open for operator inspection.
 
 ## Dispatch invariant
 

@@ -5,7 +5,6 @@ from __future__ import annotations
 import django_filters
 from django.db.models import QuerySet
 from netbox.filtersets import NetBoxModelFilterSet
-
 from netbox_proxbox.models import PDMEndpoint, PDMRemote
 from netbox_proxbox.models.pdm_remote import PDMRemoteTypeChoices
 

@@ -4,15 +4,14 @@ from __future__ import annotations
 
 from django import forms
 from netbox.forms import NetBoxModelFilterSetForm, NetBoxModelForm
+from netbox_proxbox.models import PBSEndpoint, PDMEndpoint, PDMRemote, ProxmoxEndpoint
+from netbox_proxbox.models.pdm_remote import PDMRemoteTypeChoices
 from utilities.forms.fields import (
     CommentField,
     DynamicModelChoiceField,
     TagFilterField,
 )
 from utilities.forms.rendering import FieldSet
-
-from netbox_proxbox.models import PDMEndpoint, PDMRemote, PBSEndpoint, ProxmoxEndpoint
-from netbox_proxbox.models.pdm_remote import PDMRemoteTypeChoices
 
 
 class PDMEndpointForm(NetBoxModelForm):

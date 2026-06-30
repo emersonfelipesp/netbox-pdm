@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import django_tables2 as tables
 from netbox.tables import ChoiceFieldColumn, NetBoxTable
-
 from netbox_proxbox.models import PDMEndpoint, PDMRemote
 
 
