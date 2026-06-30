@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  NETBOX_IMAGE: netboxcommunity/netbox:v4.6.3
+  NETBOX_IMAGE: netboxcommunity/netbox:v4.6.4
   SECRET_KEY: netbox-pdm-e2e-secret-key-netbox-pdm-e2e-secret-key-netbox-pdm-e2e-secret-key
 
 concurrency:
@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   page-coverage:
-    name: Page Coverage / netboxcommunity/netbox:v4.6.3 / local
+    name: Page Coverage / netboxcommunity/netbox:v4.6.4 / local
     runs-on: ubuntu-latest
     timeout-minutes: 120
 

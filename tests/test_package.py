@@ -16,6 +16,7 @@ SUPPORTED_NETBOX_IMAGES = (
     "netboxcommunity/netbox:v4.6.1",
     "netboxcommunity/netbox:v4.6.2",
     "netboxcommunity/netbox:v4.6.3",
+    "netboxcommunity/netbox:v4.6.4",
 )
 
 
