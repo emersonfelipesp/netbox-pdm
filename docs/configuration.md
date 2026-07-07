@@ -63,6 +63,10 @@ Sync is triggered per-endpoint.  From the endpoint detail page, click
 **Sync** to enqueue a `PDMSyncJob`.  The job runs in the NetBox RQ worker
 queue (`default`) with a 10-minute timeout.
 
+The UI sync action is a mutating queue operation. The user must be able to view
+the selected endpoint and must also have `core.add_job`; read-only endpoint
+access alone cannot enqueue sync.
+
 To trigger a sync programmatically:
 
 ```python
@@ -80,6 +84,7 @@ Assign these via **Admin → Permissions**:
 | --- | --- |
 | View endpoint list / detail | `netbox_proxbox.view_pdmendpoint` |
 | Add / edit endpoints | `netbox_proxbox.add_pdmendpoint` / `change_pdmendpoint` |
+| Trigger endpoint sync | Endpoint visibility plus `core.add_job` |
 | View remote list / detail | `netbox_proxbox.view_pdmremote` |
 | Edit remotes | `netbox_proxbox.change_pdmremote` |
 | Delete | `netbox_proxbox.delete_pdmendpoint` / `delete_pdmremote` |

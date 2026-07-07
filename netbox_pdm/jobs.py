@@ -21,6 +21,19 @@ PDM_SYNC_QUEUE_NAME = RQ_QUEUE_DEFAULT
 __all__ = ("PDMSyncJob",)
 
 
+def _endpoint_label(endpoint: object) -> str:
+    """Return a log-safe endpoint label that does not stringify all fields."""
+    endpoint_name = getattr(endpoint, "name", "")
+    endpoint_pk = getattr(endpoint, "pk", None)
+    if endpoint_name and endpoint_pk is not None:
+        return f"{endpoint_name} (pk={endpoint_pk})"
+    if endpoint_name:
+        return str(endpoint_name)
+    if endpoint_pk is not None:
+        return f"pk={endpoint_pk}"
+    return endpoint.__class__.__name__
+
+
 def _make_pdm_client(endpoint: object) -> object:
     """Construct a :class:`~proxmox_sdk.pdm.client.SyncPDMClient` for *endpoint*.
 
@@ -43,7 +56,9 @@ def _make_pdm_client(endpoint: object) -> object:
         str(endpoint.ip_address.address.ip) if endpoint.ip_address else None
     )
     if not host:
-        raise ValueError(f"PDMEndpoint pk={endpoint.pk} has no host or IP address.")
+        raise ValueError(
+            f"PDMEndpoint {_endpoint_label(endpoint)} has no host or IP address."
+        )
 
     user, token_name = parse_token_id(endpoint.token_id)
 
@@ -52,7 +67,7 @@ def _make_pdm_client(endpoint: object) -> object:
             "PDMEndpoint '%s': TLS verification DISABLED (verify_ssl=False). "
             "This allows MITM attacks. Add the server CA to your trust store "
             "or issue a proper certificate for production use.",
-            endpoint,
+            _endpoint_label(endpoint),
         )
 
     return SyncPDMClient(
@@ -75,7 +90,7 @@ def _fetch_pdm_remotes(endpoint: object, log: logging.Logger) -> list:
     """
     with _make_pdm_client(endpoint) as client:
         remotes = client.remotes.list()
-    log.info("PDM %s returned %d remotes.", endpoint, len(remotes))
+    log.info("PDM %s returned %d remotes.", _endpoint_label(endpoint), len(remotes))
     return remotes
 
 
@@ -85,12 +100,14 @@ def _sync_remotes(endpoint: object, remotes: list, log: logging.Logger) -> dict:
     from netbox_proxbox.models import PDMRemote as PDMRemoteRecord
 
     created = updated = 0
+    seen_remote_names: set[str] = set()
 
     for remote in remotes:
         remote_name = remote.id
         if not remote_name:
             log.warning("Skipping PDM remote with no id: %s", remote)
             continue
+        seen_remote_names.add(remote_name)
 
         remote_type = remote.type or "pve"
         nodes = remote.nodes or []
@@ -118,7 +135,24 @@ def _sync_remotes(endpoint: object, remotes: list, log: logging.Logger) -> dict:
             updated += 1
             log.debug("Updated PDMRemote '%s'.", remote_name)
 
-    return {"created": created, "updated": updated, "total": len(remotes)}
+    stale_remotes = PDMRemoteRecord.objects.filter(pdm_endpoint=endpoint).exclude(
+        name__in=seen_remote_names,
+    )
+    deleted = stale_remotes.count()
+    if deleted:
+        stale_remotes.delete()
+        log.info(
+            "Deleted %d stale PDMRemote record(s) for endpoint '%s'.",
+            deleted,
+            _endpoint_label(endpoint),
+        )
+
+    return {
+        "created": created,
+        "updated": updated,
+        "deleted": deleted,
+        "total": len(remotes),
+    }
 
 
 class PDMSyncJob(JobRunner):
@@ -239,11 +273,17 @@ class PDMSyncJob(JobRunner):
             raise RuntimeError(f"PDMEndpoint pk={endpoint_pk} not found.")
 
         if not endpoint.enabled:
-            self.logger.warning("PDMEndpoint '%s' is disabled — skipping sync.", endpoint)
+            self.logger.warning(
+                "PDMEndpoint '%s' is disabled — skipping sync.",
+                _endpoint_label(endpoint),
+            )
             return
 
         run_started = time.monotonic()
-        self.logger.info("Starting PDM sync for endpoint '%s'.", endpoint)
+        self.logger.info(
+            "Starting PDM sync for endpoint '%s'.",
+            _endpoint_label(endpoint),
+        )
 
         remotes = _fetch_pdm_remotes(endpoint, self.logger)
 
@@ -277,8 +317,9 @@ class PDMSyncJob(JobRunner):
             )
 
         self.logger.info(
-            "PDM sync complete for '%s': created=%d updated=%d.",
-            endpoint,
+            "PDM sync complete for '%s': created=%d updated=%d deleted=%d.",
+            _endpoint_label(endpoint),
             result["created"],
             result["updated"],
+            result["deleted"],
         )

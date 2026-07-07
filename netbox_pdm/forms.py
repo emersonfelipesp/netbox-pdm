@@ -17,6 +17,22 @@ from utilities.forms.rendering import FieldSet
 class PDMEndpointForm(NetBoxModelForm):
     comments = CommentField()
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if getattr(self.instance, "pk", None):
+            self.fields["token_secret"].required = False
+            self.fields["token_secret"].help_text = (
+                "Leave blank to keep the stored token secret."
+            )
+
+    def clean_token_secret(self):
+        token_secret = self.cleaned_data.get("token_secret")
+        if token_secret not in (None, ""):
+            return token_secret
+        if getattr(self.instance, "pk", None):
+            return getattr(self.instance, "token_secret", "")
+        return token_secret
+
     class Meta:
         model = PDMEndpoint
         fields = (
@@ -52,7 +68,7 @@ class PDMEndpointForm(NetBoxModelForm):
             FieldSet("proxmox_endpoints", "pbs_endpoints", name="Federation"),
         )
         widgets = {
-            "token_secret": forms.PasswordInput(render_value=True),
+            "token_secret": forms.PasswordInput(render_value=False),
         }
 
 
