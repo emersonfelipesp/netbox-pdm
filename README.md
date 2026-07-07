@@ -15,9 +15,17 @@ shared Pydantic line with `proxmox-sdk`.
 
 ## Status
 
-`netbox-pdm` v0.0.2 ships read-only PDM endpoint and remote inventory views,
-sync job wiring, and the proxmox-sdk-backed PDM client path. The plugin is
-**read-only**: all mutations remain in PDM.
+`netbox-pdm` v0.0.2 ships PDM endpoint and remote inventory views, sync job
+wiring, and the proxmox-sdk-backed PDM client path. The plugin never writes
+configuration back to PDM; sync reconciles NetBox inventory rows only.
+
+Security and reconciliation behavior:
+
+- Triggering endpoint sync requires both endpoint visibility and `core.add_job`.
+- PDM token secrets are never rendered back into endpoint edit forms; leaving
+  the field blank preserves the stored secret.
+- Sync creates, updates, and prunes `PDMRemote` rows so remotes removed from
+  PDM do not remain as stale NetBox inventory.
 
 ## Compatibility
 

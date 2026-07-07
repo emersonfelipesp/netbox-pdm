@@ -25,6 +25,18 @@ python manage.py collectstatic
 - Type checking: `pyright .`
 - Full test suite: `pytest tests/ -v`
 
+## Security and Sync Invariants
+
+- `PDMEndpointSyncView` is a mutating queue action. It must resolve endpoints
+  through NetBox object visibility and require `core.add_job`; never authorize
+  sync enqueue with `netbox_proxbox.view_pdmendpoint` alone.
+- `PDMEndpointForm` must use `PasswordInput(render_value=False)` for
+  `token_secret`. Blank token-secret submissions on edit preserve the stored
+  value; stored secrets must not be rendered into HTML or logs.
+- `PDMSyncJob` reconciles PDM remotes by creating, updating, and pruning stale
+  `PDMRemote` rows scoped to the endpoint. Job results should include created,
+  updated, deleted, and total counts.
+
 ## Architecture
 
 See the plugin's code structure:

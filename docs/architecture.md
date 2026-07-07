@@ -108,7 +108,9 @@ PDMSyncJob.enqueue(endpoint_pk=<pk>)
        name=remote_name,
        defaults={type, hostname, fingerprint, version, last_seen_at, ...}
    )
-5. Persist `job.data["result"]` and log created / updated counts
+5. Delete stale PDMRemote rows for the endpoint when their names are absent
+   from the current PDM response
+6. Persist `job.data["result"]` and log created / updated / deleted counts
 ```
 
 If `branching_enabled` is `True` in `PdmPluginSettings`, the sync runs
@@ -131,6 +133,11 @@ PDMSyncJob.enqueue(endpoint_pk=endpoint.pk)
 PDMSyncJob.enqueue(instance=endpoint)  # raises TypeError
 ```
 
+The UI sync action is mutating even though PDM itself remains read-only. The
+POST endpoint first resolves the endpoint through NetBox's `restrict(user,
+"view")` object-visibility queryset and then requires `core.add_job` before it
+queues `PDMSyncJob`.
+
 ## Token format
 
 PDM API tokens use the format `user@realm!tokenname:secret`.  In the
@@ -148,6 +155,13 @@ PDM API tokens use the format `user@realm!tokenname:secret`.  In the
 - When `verify_ssl=False` on a `PDMEndpoint`, the sync job emits a
   **CRITICAL** log entry.  This setting should only be used in air-gapped
   or internal deployments where a proper CA certificate cannot be added.
-- API token secrets are stored in NetBox and protected by NetBox's own
-  access controls.  Restrict `view_pdmendpoint` permissions to operators
-  who are authorised to see credentials.
+- Log messages use a safe endpoint label and do not stringify the full endpoint
+  object, so token fields are not emitted through object representations.
+- API token secrets remain stored by the owning `netbox-proxbox` model and are
+  protected by NetBox's own access controls.
+- Endpoint edit forms use `PasswordInput(render_value=False)` so the stored
+  token secret is never rendered into HTML. On edits, submitting the token
+  secret field blank preserves the stored value.
+- Triggering sync requires `core.add_job` in addition to endpoint visibility;
+  `view_pdmendpoint` alone can inspect visible inventory but cannot enqueue RQ
+  sync work.

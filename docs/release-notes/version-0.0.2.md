@@ -17,8 +17,14 @@ This release delivers the full PDM inventory and sync feature set:
   via `PDMSyncJob.enqueue(endpoint_pk=<pk>)`.
 - Sync calls the PDM API **directly via `proxmox-sdk`** `SyncPDMClient` —
   no `proxbox-api` process is required.
+- Sync reconciles remote inventory by creating/updating rows reported by PDM
+  and deleting stale rows that are no longer present in the PDM response.
+- The UI sync action requires endpoint visibility plus `core.add_job`, matching
+  NetBox job-queue authorization expectations.
 - Token parsing uses `proxmox_sdk.sdk.auth.token.parse_token_id()` to split
   `user@realm!tokenname` from the `token_id` field.
+- Endpoint edit forms never render the stored token secret into HTML; leaving
+  the token-secret field blank preserves the stored value.
 - `verify_ssl=False` emits a CRITICAL log entry per sync; always use a
   trusted certificate or pin the fingerprint in production.
 

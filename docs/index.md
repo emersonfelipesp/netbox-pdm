@@ -20,13 +20,14 @@ NetBox  (PDMSyncJob — background RQ job)
 Proxmox Datacenter Manager API  →  /remotes endpoint
     │
     ▼
-PDMRemote rows created/updated in NetBox
+PDMRemote rows created/updated/deleted in NetBox
 ```
 
 The `PDMSyncJob` builds a `SyncPDMClient` from the `PDMEndpoint` credentials
 (token format `user@realm!tokenname:secret`), calls the PDM remotes list,
-and `update_or_create`s `PDMRemote` rows in NetBox.  No `proxbox-api`
-process is required for sync.
+and reconciles `PDMRemote` rows in NetBox. Rows reported by PDM are created
+or updated, and rows no longer reported by PDM are deleted as stale inventory.
+No `proxbox-api` process is required for sync.
 
 ## Scope
 
@@ -35,6 +36,10 @@ v0.0.2 delivers:
 - Read-only **PDMEndpoint** and **PDMRemote** inventory views: list, detail,
   edit, delete, and changelog.
 - **PDMSyncJob** background RQ job with per-endpoint dispatch.
+- Sync trigger hardening: users must have endpoint visibility plus
+  `core.add_job` to enqueue a mutating sync job.
+- Credential form hardening: token secrets are not echoed into edit-page HTML;
+  blank token-secret submissions preserve the stored value.
 - Optional [**netbox-branching**](https://github.com/netboxlabs/netbox-branching)
   integration: sync runs inside a branch and merges on success.
 - Packaging, docs, CI pipelines, and certification evidence.

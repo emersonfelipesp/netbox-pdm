@@ -20,6 +20,14 @@ from netbox_pdm.forms import (
 from netbox_pdm.jobs import PDMSyncJob
 from netbox_pdm.tables import PDMEndpointTable, PDMRemoteTable
 
+PDM_SYNC_PERMISSION = "core.add_job"
+
+
+def permission_enqueue_pdm_sync(user: object) -> bool:
+    """Return whether *user* may enqueue mutating PDM sync jobs."""
+    return bool(user.has_perm(PDM_SYNC_PERMISSION))
+
+
 # ---------------------------------------------------------------------------
 # Home view — redirects to the endpoint list
 # ---------------------------------------------------------------------------
@@ -81,8 +89,11 @@ class PDMEndpointSyncView(ConditionalLoginRequiredMixin, View):
     """Trigger a PDMSyncJob for a single PDMEndpoint."""
 
     def post(self, request, pk):
-        endpoint = get_object_or_404(PDMEndpoint, pk=pk)
-        if not request.user.has_perm("netbox_proxbox.view_pdmendpoint"):
+        endpoint = get_object_or_404(
+            PDMEndpoint.objects.restrict(request.user, "view"),
+            pk=pk,
+        )
+        if not permission_enqueue_pdm_sync(request.user):
             return HttpResponseForbidden()
         PDMSyncJob.enqueue(endpoint_pk=endpoint.pk)
         messages.success(
