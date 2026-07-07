@@ -319,6 +319,22 @@ def _import_forms_module(monkeypatch: pytest.MonkeyPatch):
             self.render_value = render_value
             self.kwargs = kwargs
 
+    class CharField:
+        def __init__(
+            self,
+            *,
+            label=None,
+            required=True,
+            widget=None,
+            help_text="",
+            **kwargs,
+        ) -> None:
+            self.label = label
+            self.required = required
+            self.widget = widget
+            self.help_text = help_text
+            self.kwargs = kwargs
+
     class NullBooleanSelect:
         pass
 
@@ -327,6 +343,7 @@ def _import_forms_module(monkeypatch: pytest.MonkeyPatch):
             self.args = args
             self.kwargs = kwargs
 
+    django_forms.CharField = CharField
     django_forms.PasswordInput = PasswordInput
     django_forms.NullBooleanSelect = NullBooleanSelect
     django_forms.MultipleChoiceField = MultipleChoiceField
@@ -338,9 +355,22 @@ def _import_forms_module(monkeypatch: pytest.MonkeyPatch):
         def __init__(self, *args, **kwargs) -> None:
             self.instance = kwargs.get("instance") or SimpleNamespace(pk=None)
             self.cleaned_data = {}
+            token_secret = getattr(type(self), "token_secret", None)
             self.fields = {
-                "token_secret": SimpleNamespace(required=True, help_text=""),
+                "token_secret": SimpleNamespace(
+                    required=getattr(token_secret, "required", True),
+                    help_text=getattr(token_secret, "help_text", ""),
+                    widget=getattr(token_secret, "widget", None),
+                ),
             }
+
+        def save(self, *, commit=True):
+            if commit:
+                self.instance.save()
+            return self.instance
+
+        def save_m2m(self):
+            self.saved_m2m = True
 
     class NetBoxModelFilterSetForm:
         pass
@@ -409,6 +439,8 @@ def test_pdm_endpoint_form_never_renders_existing_token_and_preserves_blank(
 
     widget = forms.PDMEndpointForm.Meta.widgets["token_secret"]
     assert widget.render_value is False
+    assert forms.PDMEndpointForm.token_secret.required is True
+    assert forms.PDMEndpointForm.token_secret.widget.render_value is False
 
     instance = SimpleNamespace(pk=123, token_secret="stored-fernet-value")
     form = forms.PDMEndpointForm(instance=instance)
@@ -422,6 +454,29 @@ def test_pdm_endpoint_form_never_renders_existing_token_and_preserves_blank(
 
     add_form = forms.PDMEndpointForm(instance=SimpleNamespace(pk=None))
     assert add_form.fields["token_secret"].required is True
+
+
+def test_pdm_endpoint_form_saves_token_secret_through_model_property(monkeypatch):
+    forms = _import_forms_module(monkeypatch)
+
+    class EndpointInstance:
+        pk = 123
+        token_secret = "stored-secret"
+        saved = False
+
+        def save(self):
+            self.saved = True
+
+    instance = EndpointInstance()
+    form = forms.PDMEndpointForm(instance=instance)
+    form.cleaned_data = {"token_secret": "replacement-secret"}
+
+    saved = form.save()
+
+    assert saved is instance
+    assert instance.token_secret == "replacement-secret"
+    assert instance.saved is True
+    assert form.saved_m2m is True
 
 
 class _FakeUser:

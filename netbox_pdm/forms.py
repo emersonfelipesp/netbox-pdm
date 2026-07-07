@@ -16,6 +16,15 @@ from utilities.forms.rendering import FieldSet
 
 class PDMEndpointForm(NetBoxModelForm):
     comments = CommentField()
+    token_secret = forms.CharField(
+        label="Token secret",
+        required=True,
+        widget=forms.PasswordInput(render_value=False),
+        help_text=(
+            "PDM API token secret. The value is encrypted by netbox-proxbox "
+            "and is never rendered after saving."
+        ),
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -32,6 +41,16 @@ class PDMEndpointForm(NetBoxModelForm):
         if getattr(self.instance, "pk", None):
             return getattr(self.instance, "token_secret", "")
         return token_secret
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        token_secret = self.cleaned_data.get("token_secret")
+        if token_secret not in (None, ""):
+            instance.token_secret = token_secret
+        if commit:
+            instance.save()
+            self.save_m2m()
+        return instance
 
     class Meta:
         model = PDMEndpoint
