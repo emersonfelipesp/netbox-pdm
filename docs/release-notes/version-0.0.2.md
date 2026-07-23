@@ -46,6 +46,17 @@ This release delivers the full PDM inventory and sync feature set:
 - Gitea CI workflow: ruff lint, `compileall`, pytest, deploy-on-push.
 - GitHub mirror via `mirror-github.yml`.
 
+### Post-release fix: NetBox 4.5.x migration graph
+
+- `netbox_pdm/migrations/0002_pdmpluginsettings_tags_and_more.py` depended on
+  `extras.0138_customfieldchoiceset_choice_colors`, a NetBox-4.6-only
+  migration node. This raised `NodeNotFoundError` on a real NetBox 4.5.x
+  install despite v0.0.2 already certifying NetBox v4.5.8 support. The
+  dependency was retargeted to `extras.0134_owner` (present in both 4.5.x and
+  4.6.x), and `tests/test_migration_dependencies.py` was added as a regression
+  guard against future migration nodes that only exist on one side of the
+  supported NetBox range.
+
 ## Compatibility
 
 | NetBox | netbox-pdm | netbox-proxbox | Python |
