@@ -50,33 +50,44 @@ _EDGE_ATTRIBUTES = ("dependencies", "run_before")
 def _iter_edge_entries(tree):
     """Yield (edge_kind, resolved_pair_or_None, source_text) for graph edges."""
     for node in ast.walk(tree):
-        if not isinstance(node, ast.Assign):
+        if isinstance(node, ast.Assign):
+            targets = node.targets
+        elif isinstance(node, ast.AnnAssign):
+            targets = [node.target]
+        else:
             continue
-        targets = {getattr(target, "id", "") for target in node.targets}
-        kinds = targets.intersection(_EDGE_ATTRIBUTES)
+        target_names = {getattr(target, "id", "") for target in targets}
+        kinds = target_names.intersection(_EDGE_ATTRIBUTES)
         if not kinds:
             continue
         kind = kinds.pop()
+        if node.value is None:
+            yield kind, None, "<missing>"
+            continue
         if not isinstance(node.value, (ast.List, ast.Tuple)):
             yield kind, None, ast.dump(node.value)[:80]
             continue
         for element in node.value.elts:
-            resolved = None
-            if isinstance(element, (ast.Tuple, ast.List)) and len(element.elts) == 2:
-                try:
-                    resolved = (
-                        ast.literal_eval(element.elts[0]),
-                        ast.literal_eval(element.elts[1]),
-                    )
-                except ValueError:
-                    resolved = None
-            if resolved is not None and not (
-                isinstance(resolved[0], str) and isinstance(resolved[1], str)
-            ):
-                resolved = None
+            resolved = _resolve_edge_element(element)
             if resolved is None and _is_swappable_dependency(element):
                 continue
             yield kind, resolved, ast.dump(element)[:80]
+
+
+def _resolve_edge_element(element):
+    """Return a literal (app, name) string pair, or None if unresolvable."""
+    if not (isinstance(element, (ast.Tuple, ast.List)) and len(element.elts) == 2):
+        return None
+    try:
+        resolved = (
+            ast.literal_eval(element.elts[0]),
+            ast.literal_eval(element.elts[1]),
+        )
+    except ValueError:
+        return None
+    if not (isinstance(resolved[0], str) and isinstance(resolved[1], str)):
+        return None
+    return resolved
 
 
 def _is_swappable_dependency(element):
@@ -84,7 +95,31 @@ def _is_swappable_dependency(element):
         isinstance(element, ast.Call)
         and isinstance(element.func, ast.Attribute)
         and element.func.attr == "swappable_dependency"
+        and isinstance(element.func.value, ast.Name)
+        and element.func.value.id == "migrations"
     )
+
+
+def test_iter_edge_entries_handles_annotated_assignments():
+    tree = ast.parse(
+        'dependencies: list[tuple[str, str]] = [("dcim", "0227_alter_interface_speed_bigint")]'
+    )
+
+    entries = list(_iter_edge_entries(tree))
+
+    assert len(entries) == 1
+    assert entries[0][:2] == (
+        "dependencies",
+        ("dcim", "0227_alter_interface_speed_bigint"),
+    )
+
+
+def test_swappable_dependency_exemption_requires_migrations_receiver():
+    valid = ast.parse("migrations.swappable_dependency(settings.AUTH_USER_MODEL)").body[0].value
+    impostor = ast.parse("helpers.swappable_dependency(settings.AUTH_USER_MODEL)").body[0].value
+
+    assert _is_swappable_dependency(valid)
+    assert not _is_swappable_dependency(impostor)
 
 
 def test_core_migration_graph_edges_exist_in_netbox_458():
