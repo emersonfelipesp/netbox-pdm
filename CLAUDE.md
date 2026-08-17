@@ -105,3 +105,45 @@ ssh nmc-prod-207 -- deploy-plugin pdm v0.1.0
 ```
 
 For comprehensive deploy infrastructure documentation, see `/root/personal-context/nmulticloud-context/CLAUDE.md` section "Automatic Plugin Deployment to Production".
+
+## NetBox compatibility: two tiers, one shared module
+
+`netbox_pdm/compat.py` is the single declaration of which NetBox releases this plugin
+supports, and `PluginConfig.min_version`/`max_version` are sourced from it rather
+than re-typed as literals:
+
+- **stable** `4.5.8` – `4.6.99` — admitted silently; specific versions in
+  this band are exercised in CI, the rest are admitted on their strength;
+- **experimental** `4.7.0` – `4.7.99` — loads and runs with no configuration
+  change, and emits system check `netbox_pdm.W001` (a **Warning**, never an Error)
+  plus one `ready()` log line. A version that cannot be classified reports
+  `netbox_pdm.W002` rather than passing silently. Operators silence the notice with the
+  `silence_netbox_compatibility_warning` key in this plugin's
+  `PLUGINS_CONFIG` entry. NetBox does **not** read
+  `SILENCED_SYSTEM_CHECKS` from `configuration.py`, so that route does
+  nothing.
+
+**`compat.py` is vendored byte-identically across `netbox-proxbox`,
+`netbox-ceph`, `netbox-packer`, `netbox-pbs`, and `netbox-pdm`.** Change it in
+one repo and you must change it in all five, bumping `CONTRACT_VERSION` when the
+contract itself moves. Verify with
+`sha256sum */compat.py` across the five checkouts — the
+`proxbox-stack-code-review` skill runs that drift check.
+
+Two hard rules:
+
+1. **No Django import at module scope in `compat.py`.** NetBox imports it while
+   `netbox/settings.py` is still executing, so every Django touch lives inside a
+   function.
+2. **Upgrading to NetBox 4.7 means upgrading the whole plugin family.**
+   `settings.py` *catches* `IncompatiblePluginError`, warns, and **skips** the
+   offending plugin — NetBox still starts. The failure is therefore silent: the
+   plugin's views, API routes and jobs are simply absent, and a health probe
+   against NetBox still passes. Verify registration with `apps.is_installed()`
+   after any upgrade rather than trusting that NetBox came up.
+
+Beta release strings are why the ceiling is `4.7.99` and not something
+pre-release-shaped: `release.yaml` at tag `v4.7.0-beta1` reads `version: "4.7.0"`
+with `designation: "beta1"`, and the plugin gate compares against
+`RELEASE.version` — the bare `"4.7.0"`. `RELEASE.full_version`
+(`"4.7.0-beta1"`) is display only.

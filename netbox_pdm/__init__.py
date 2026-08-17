@@ -8,6 +8,12 @@ from __future__ import annotations
 
 from netbox.plugins import PluginConfig
 
+from .compat import (
+    PLUGIN_MAX_VERSION,
+    PLUGIN_MIN_VERSION,
+    register_netbox_compatibility_check,
+)
+
 __version__ = "0.0.2"
 
 
@@ -22,8 +28,12 @@ class NetBoxPDMConfig(PluginConfig):
     author = "Emerson Felipe"
     author_email = "emersonfelipe.2003@gmail.com"
     base_url = "pdm"
-    min_version = "4.5.8"
-    max_version = "4.6.99"
+    # Sourced from .compat so the stable/experimental bands are declared in
+    # one place across the Proxbox plugin stack. max_version is the
+    # *experimental* ceiling: NetBox 4.7 loads without an opt-in, and
+    # .compat's system check warns that the line is not yet certified.
+    min_version = PLUGIN_MIN_VERSION
+    max_version = PLUGIN_MAX_VERSION
     required_plugins = ["netbox_proxbox"]
     required_settings: list[str] = []
     default_settings = {
@@ -35,6 +45,7 @@ class NetBoxPDMConfig(PluginConfig):
 
     def ready(self) -> None:
         super().ready()
+        register_netbox_compatibility_check(self)
 
 
 config = NetBoxPDMConfig

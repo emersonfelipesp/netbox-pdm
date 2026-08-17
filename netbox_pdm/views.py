@@ -32,6 +32,7 @@ def permission_enqueue_pdm_sync(user: object) -> bool:
 # Home view — redirects to the endpoint list
 # ---------------------------------------------------------------------------
 
+
 class PDMHomeView(ConditionalLoginRequiredMixin, View):
     """Plugin home page — redirects to the PDMEndpoint list."""
 
@@ -42,6 +43,7 @@ class PDMHomeView(ConditionalLoginRequiredMixin, View):
 # ---------------------------------------------------------------------------
 # PDMEndpoint views
 # ---------------------------------------------------------------------------
+
 
 @register_model_view(PDMEndpoint, "list", path="", detail=False)
 class PDMEndpointListView(generic.ObjectListView):
@@ -85,6 +87,7 @@ class PDMEndpointDeleteView(generic.ObjectDeleteView):
 # PDMEndpoint sync action (POST only, not a registered model view)
 # ---------------------------------------------------------------------------
 
+
 class PDMEndpointSyncView(ConditionalLoginRequiredMixin, View):
     """Trigger a PDMSyncJob for a single PDMEndpoint."""
 
@@ -106,6 +109,7 @@ class PDMEndpointSyncView(ConditionalLoginRequiredMixin, View):
 # ---------------------------------------------------------------------------
 # PDMRemote views
 # ---------------------------------------------------------------------------
+
 
 @register_model_view(PDMRemote, "list", path="", detail=False)
 class PDMRemoteListView(generic.ObjectListView):

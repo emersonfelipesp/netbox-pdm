@@ -43,9 +43,7 @@ def login_session(base_url: str) -> requests.Session:
         timeout=30,
     )
     if resp.status_code != 302:
-        raise RuntimeError(
-            f"Session login failed: HTTP {resp.status_code} — {resp.text[:200]}"
-        )
+        raise RuntimeError(f"Session login failed: HTTP {resp.status_code} — {resp.text[:200]}")
     return session
 
 

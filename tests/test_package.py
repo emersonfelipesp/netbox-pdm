@@ -38,7 +38,7 @@ def test_plugin_config_exposes_required_attrs() -> None:
     data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert cfg.version == data["project"]["version"]
     assert cfg.min_version == "4.5.8"
-    assert cfg.max_version == "4.6.99"
+    assert cfg.max_version == "4.7.99"
     assert cfg.required_plugins == ["netbox_proxbox"]
     assert cfg.author_email == "emersonfelipe.2003@gmail.com"
 
@@ -53,8 +53,7 @@ def test_pyproject_certification_metadata() -> None:
     assert "License :: OSI Approved :: Apache Software License" not in project["classifiers"]
     assert "proxmox-sdk>=0.0.12" in project["dependencies"]
     assert not any(
-        dependency.startswith("netbox-proxbox")
-        for dependency in project["dependencies"]
+        dependency.startswith("netbox-proxbox") for dependency in project["dependencies"]
     )
     assert project["urls"]["Documentation"] == "https://emersonfelipesp.github.io/netbox-pdm/"
     assert (ROOT / "LICENSE").is_file()
@@ -95,9 +94,9 @@ def test_pdm_sync_job_persists_result_data() -> None:
 
 def test_pdm_sync_job_uses_branch_lifecycle_for_orm_reconciliation() -> None:
     jobs = (ROOT / "netbox_pdm" / "jobs.py").read_text(encoding="utf-8")
-    lifecycle = (
-        ROOT / "netbox_pdm" / "services" / "branch_lifecycle.py"
-    ).read_text(encoding="utf-8")
+    lifecycle = (ROOT / "netbox_pdm" / "services" / "branch_lifecycle.py").read_text(
+        encoding="utf-8"
+    )
 
     for snippet in (
         "branching_enabled_settings()",
@@ -110,3 +109,47 @@ def test_pdm_sync_job_uses_branch_lifecycle_for_orm_reconciliation() -> None:
 
     assert '"activate_branch_context"' in lifecycle
     assert "from netbox_branching.utilities import activate_branch" in lifecycle
+
+
+def test_plugin_config_bounds_come_from_the_shared_compat_module() -> None:
+    """The declared bounds must be sourced from compat.py, not re-typed literals.
+
+    Two copies of the supported range would drift silently. The stable ceiling
+    (4.6.99) and the declared ceiling (4.7.99) are deliberately different: 4.7 is
+    admitted on an experimental basis, so ``max_version`` is the experimental one.
+    """
+    pytest.importorskip("netbox")
+    from netbox_pdm import config
+    from netbox_pdm.compat import (
+        EXPERIMENTAL_MAX_NETBOX_VERSION,
+        PLUGIN_MAX_VERSION,
+        PLUGIN_MIN_VERSION,
+        STABLE_MAX_NETBOX_VERSION,
+        STABLE_MIN_NETBOX_VERSION,
+    )
+
+    assert config.min_version == PLUGIN_MIN_VERSION == STABLE_MIN_NETBOX_VERSION
+    assert config.max_version == PLUGIN_MAX_VERSION == EXPERIMENTAL_MAX_NETBOX_VERSION
+    assert STABLE_MAX_NETBOX_VERSION == "4.6.99"
+    assert EXPERIMENTAL_MAX_NETBOX_VERSION == "4.7.99"
+
+
+def test_packaging_is_a_declared_dependency() -> None:
+    """`compat.py` imports packaging at module scope, so the metadata must say so.
+
+    Inside a NetBox install it happens to be present transitively — NetBox core
+    uses it on the very same `PluginConfig.validate` path — and pytest drags it
+    in during CI. Neither is a declaration. Without this the wheel's metadata
+    misstates what the package imports, and a consumer resolving it outside a
+    NetBox environment gets an ImportError at plugin import time.
+    """
+    import tomllib
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    data = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    declared = data["project"]["dependencies"]
+
+    assert any(spec.split(">=")[0].strip() == "packaging" for spec in declared), (
+        f"packaging must be declared in [project.dependencies]; got {declared}"
+    )
