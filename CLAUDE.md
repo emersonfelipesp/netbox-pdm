@@ -117,7 +117,7 @@ than re-typed as literals:
   change, and emits system check `netbox_pdm.W001` (a **Warning**, never an Error)
   plus one `ready()` log line. A version that cannot be classified reports
   `netbox_pdm.W002` rather than passing silently. Operators silence the notice with
-  Django's stock `SILENCED_SYSTEM_CHECKS`; the plugin adds no setting of its own.
+  Django's stock the `silence_netbox_compatibility_warning` key in this plugin's `PLUGINS_CONFIG` entry — see below; NetBox does not read `SILENCED_SYSTEM_CHECKS` from `configuration.py`.
 
 **`compat.py` is vendored byte-identically across `netbox-proxbox`,
 `netbox-ceph`, `netbox-packer`, `netbox-pbs`, and `netbox-pdm`.** Change it in

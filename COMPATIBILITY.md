@@ -30,12 +30,23 @@ WARNINGS:
    4.5.8 through 4.6.99.
 ```
 
-It is a warning, never an error, so it cannot block NetBox from starting. Silence
-it with Django's stock mechanism in `configuration.py` once the risk is accepted:
+It is a warning, never an error — it cannot block NetBox from starting.
+
+**To silence it**, set the key in this plugin's `PLUGINS_CONFIG` entry:
 
 ```python
-SILENCED_SYSTEM_CHECKS = ["netbox_pdm.W001"]
+PLUGINS_CONFIG = {
+    "netbox_pdm": {"silence_netbox_compatibility_warning": True},
+}
 ```
+
+That silences both the system check and the startup log line.
+
+> Django's own `SILENCED_SYSTEM_CHECKS` is honoured too, but **not from
+> `configuration.py`** — NetBox's `settings.py` imports an explicit list of
+> named settings and that one is not on it, so setting it there has no effect.
+> It only applies through NetBox's `local_settings.py` hatch, which upstream
+> labels unsupported. Use the `PLUGINS_CONFIG` key above.
 
 NetBox below `4.5.8` and from `4.8` onward is still refused outright by NetBox's
 own plugin version gate.
@@ -68,6 +79,24 @@ python manage.py shell -c "from django.apps import apps; print([p for p in ('net
 ```
 
 On 4.5.8–4.6.x, mixed versions remain fine as before.
+
+### netbox-branching does not support NetBox 4.7 yet
+
+`netboxlabs-netbox-branching` declares `max_version = "4.6.99"` (checked
+through 1.0.3), so on NetBox 4.7 **NetBox skips it** — the package stays
+importable, but its Django app is absent from `INSTALLED_APPS` and its models
+and schemas do not exist.
+
+If you use branch-isolated sync (`branching_enabled = True`), **do not move to
+NetBox 4.7 until a 4.7-capable netbox-branching release exists.** The
+availability detector here now requires the loaded app rather than an
+importable package, so a skipped branching app is correctly reported as
+unavailable; but a sync configured for branch isolation that finds branching
+unavailable currently proceeds against `main` rather than refusing, which
+silently drops the isolation boundary you configured. Tightening that to
+fail closed is tracked separately.
+
+Installations that do not use branching are unaffected.
 
 **Beta version strings.** NetBox's `release.yaml` at tag `v4.7.0-beta1` reads
 `version: "4.7.0"` with `designation: "beta1"`, and `netbox/settings.py` passes
