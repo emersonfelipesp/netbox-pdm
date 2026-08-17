@@ -141,10 +141,12 @@ Two hard rules:
 1. **No Django import at module scope in `compat.py`.** NetBox imports it while
    `netbox/settings.py` is still executing, so every Django touch lives inside a
    function.
-2. **Upgrading to NetBox 4.7 upgrades the whole plugin family at once.**
-   `PluginConfig.validate()` raises while settings are still being built, so one
-   companion plugin left at the `4.6.99` ceiling stops NetBox from starting at
-   all — a failed boot, not a disabled plugin.
+2. **Upgrading to NetBox 4.7 means upgrading the whole plugin family.**
+   `settings.py` *catches* `IncompatiblePluginError`, warns, and **skips** the
+   offending plugin — NetBox still starts. The failure is therefore silent: the
+   plugin's views, API routes and jobs are simply absent, and a health probe
+   against NetBox still passes. Verify registration with `apps.is_installed()`
+   after any upgrade rather than trusting that NetBox came up.
 
 Beta release strings are why the ceiling is `4.7.99` and not something
 pre-release-shaped: `release.yaml` at tag `v4.7.0-beta1` reads `version: "4.7.0"`
