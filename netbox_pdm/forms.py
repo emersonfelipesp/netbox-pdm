@@ -30,9 +30,7 @@ class PDMEndpointForm(NetBoxModelForm):
         super().__init__(*args, **kwargs)
         if getattr(self.instance, "pk", None):
             self.fields["token_secret"].required = False
-            self.fields["token_secret"].help_text = (
-                "Leave blank to keep the stored token secret."
-            )
+            self.fields["token_secret"].help_text = "Leave blank to keep the stored token secret."
 
     def clean_token_secret(self):
         token_secret = self.cleaned_data.get("token_secret")

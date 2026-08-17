@@ -52,13 +52,9 @@ def _make_pdm_client(endpoint: object) -> object:
 
     log = logging.getLogger(__name__)
 
-    host = endpoint.domain or (
-        str(endpoint.ip_address.address.ip) if endpoint.ip_address else None
-    )
+    host = endpoint.domain or (str(endpoint.ip_address.address.ip) if endpoint.ip_address else None)
     if not host:
-        raise ValueError(
-            f"PDMEndpoint {_endpoint_label(endpoint)} has no host or IP address."
-        )
+        raise ValueError(f"PDMEndpoint {_endpoint_label(endpoint)} has no host or IP address.")
 
     user, token_name = parse_token_id(endpoint.token_id)
 
@@ -112,9 +108,7 @@ def _sync_remotes(endpoint: object, remotes: list, log: logging.Logger) -> dict:
         remote_type = remote.type or "pve"
         nodes = remote.nodes or []
         hostname = nodes[0].hostname if nodes else ""
-        fingerprint = (
-            (nodes[0].fingerprint or "") if nodes else (remote.fingerprint or "")
-        )
+        fingerprint = (nodes[0].fingerprint or "") if nodes else (remote.fingerprint or "")
 
         defaults = {
             "type": remote_type,
@@ -190,9 +184,7 @@ class PDMSyncJob(JobRunner):
         run_started: float,
         branch_config: dict[str, str],
     ) -> object:
-        branch_name = (
-            f"{branch_config['prefix']}-{self.job.pk}-{endpoint.pk}-{int(run_started)}"
-        )
+        branch_name = f"{branch_config['prefix']}-{self.job.pk}-{endpoint.pk}-{int(run_started)}"
         self.logger.info(
             "NetBox branching enabled — creating branch %r for PDM sync",
             branch_name,

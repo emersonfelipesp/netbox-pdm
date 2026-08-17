@@ -79,3 +79,13 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "I", "W", "C90"]
 ignore = ["F401", "F403", "E501"]
+
+[tool.ruff.format]
+# `netbox_pdm/compat.py` is vendored byte-identically across every Proxbox-family
+# NetBox plugin, and those repositories use different `line-length` settings
+# (88 here upstream, 100 and 120 elsewhere). Letting each repo reformat it would
+# silently break the byte-identity that the cross-repo drift check depends on —
+# and that check is the only thing keeping five copies of a compatibility policy
+# in agreement. The file is formatted once, at the narrowest width, in
+# netbox-proxbox; every other copy takes it verbatim.
+exclude = ["netbox_pdm/compat.py"]

@@ -6,21 +6,22 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('extras', '0134_owner'),
-        ('netbox_pdm', '0001_initial'),
+        ("extras", "0134_owner"),
+        ("netbox_pdm", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='pdmpluginsettings',
-            name='tags',
-            field=taggit.managers.TaggableManager(through='extras.TaggedItem', to='extras.Tag'),
+            model_name="pdmpluginsettings",
+            name="tags",
+            field=taggit.managers.TaggableManager(through="extras.TaggedItem", to="extras.Tag"),
         ),
         migrations.AlterField(
-            model_name='pdmpluginsettings',
-            name='custom_field_data',
-            field=models.JSONField(blank=True, default=dict, encoder=utilities.json.CustomFieldJSONEncoder),
+            model_name="pdmpluginsettings",
+            name="custom_field_data",
+            field=models.JSONField(
+                blank=True, default=dict, encoder=utilities.json.CustomFieldJSONEncoder
+            ),
         ),
     ]

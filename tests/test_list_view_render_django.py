@@ -64,9 +64,7 @@ try:
 except Exception as exc:  # pragma: no cover - depends on external test services
     if _REQUIRE_DJANGO:
         raise
-    pytest.skip(
-        f"NetBox test environment is not available: {exc}", allow_module_level=True
-    )
+    pytest.skip(f"NetBox test environment is not available: {exc}", allow_module_level=True)
 
 from django.contrib.auth import get_user_model  # noqa: E402
 from django.test import Client, TestCase  # noqa: E402
@@ -95,9 +93,7 @@ def _registered_plugin_list_views() -> tuple[tuple[str, type[ObjectListView]], .
                 view_class = config["view"]
                 if isinstance(view_class, str):
                     view_class = import_string(view_class)
-                if not isinstance(view_class, type) or not issubclass(
-                    view_class, ObjectListView
-                ):
+                if not isinstance(view_class, type) or not issubclass(view_class, ObjectListView):
                     continue
                 if not view_class.__module__.startswith(_PLUGIN_MODULE_PREFIX):
                     continue
@@ -152,9 +148,7 @@ class PluginListViewRenderTest(TestCase):
                 response = self.client.get(url)
                 rendered += 1
                 if response.status_code >= 400:
-                    failures.append(
-                        f"{identifier} ({url}) -> HTTP {response.status_code}"
-                    )
+                    failures.append(f"{identifier} ({url}) -> HTTP {response.status_code}")
                 self.assertLess(
                     response.status_code,
                     400,

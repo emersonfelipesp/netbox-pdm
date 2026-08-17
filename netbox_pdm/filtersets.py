@@ -17,9 +17,7 @@ class PDMEndpointFilterSet(NetBoxModelFilterSet):
         fields = ("id", "name", "domain", "port", "enabled", "verify_ssl")
 
     def search(self, queryset: QuerySet, name: str, value: str) -> QuerySet:
-        return queryset.filter(name__icontains=value) | queryset.filter(
-            domain__icontains=value
-        )
+        return queryset.filter(name__icontains=value) | queryset.filter(domain__icontains=value)
 
 
 class PDMRemoteFilterSet(NetBoxModelFilterSet):
@@ -35,6 +33,4 @@ class PDMRemoteFilterSet(NetBoxModelFilterSet):
         fields = ("id", "name", "type", "hostname", "pdm_endpoint_id")
 
     def search(self, queryset: QuerySet, name: str, value: str) -> QuerySet:
-        return queryset.filter(name__icontains=value) | queryset.filter(
-            hostname__icontains=value
-        )
+        return queryset.filter(name__icontains=value) | queryset.filter(hostname__icontains=value)

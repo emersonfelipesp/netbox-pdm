@@ -53,8 +53,7 @@ def test_pyproject_certification_metadata() -> None:
     assert "License :: OSI Approved :: Apache Software License" not in project["classifiers"]
     assert "proxmox-sdk>=0.0.12" in project["dependencies"]
     assert not any(
-        dependency.startswith("netbox-proxbox")
-        for dependency in project["dependencies"]
+        dependency.startswith("netbox-proxbox") for dependency in project["dependencies"]
     )
     assert project["urls"]["Documentation"] == "https://emersonfelipesp.github.io/netbox-pdm/"
     assert (ROOT / "LICENSE").is_file()
@@ -95,9 +94,9 @@ def test_pdm_sync_job_persists_result_data() -> None:
 
 def test_pdm_sync_job_uses_branch_lifecycle_for_orm_reconciliation() -> None:
     jobs = (ROOT / "netbox_pdm" / "jobs.py").read_text(encoding="utf-8")
-    lifecycle = (
-        ROOT / "netbox_pdm" / "services" / "branch_lifecycle.py"
-    ).read_text(encoding="utf-8")
+    lifecycle = (ROOT / "netbox_pdm" / "services" / "branch_lifecycle.py").read_text(
+        encoding="utf-8"
+    )
 
     for snippet in (
         "branching_enabled_settings()",

@@ -12,7 +12,6 @@ urlpatterns = [
     # Plugin home (redirects to endpoint list)
     path("", views.PDMHomeView.as_view(), name="home"),
     path("sitemap.txt", SitemapView.as_view(), name="sitemap"),
-
     # PDMEndpoint — list/add (detail=False) and detail/edit/delete/changelog (detail=True)
     path(
         "endpoints/",
@@ -27,7 +26,6 @@ urlpatterns = [
         views.PDMEndpointSyncView.as_view(),
         name="pdmendpoint_sync",
     ),
-
     # PDMRemote — list (detail=False) and detail (detail=True)
     path(
         "remotes/",
