@@ -68,6 +68,12 @@ metadata, GitHub Actions CI, release validation, docs publishing, screenshot
 capture, and page-coverage workflows for NetBox v4.6.4. Docker install smoke
 coverage spans NetBox v4.5.8, v4.5.9, and v4.6.0 through v4.6.4.
 
+NetBox `4.7.x` is additionally supported on an **experimental** basis: the plugin
+loads and runs with no configuration change and warns once at startup that the
+line is not yet certified. See [COMPATIBILITY.md](COMPATIBILITY.md) for the tier
+table, how to silence the notice, and why every Proxbox-family plugin must be
+upgraded together before moving an instance to 4.7.
+
 ## License
 
 Apache-2.0

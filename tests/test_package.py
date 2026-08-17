@@ -38,7 +38,7 @@ def test_plugin_config_exposes_required_attrs() -> None:
     data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert cfg.version == data["project"]["version"]
     assert cfg.min_version == "4.5.8"
-    assert cfg.max_version == "4.6.99"
+    assert cfg.max_version == "4.7.99"
     assert cfg.required_plugins == ["netbox_proxbox"]
     assert cfg.author_email == "emersonfelipe.2003@gmail.com"
 
@@ -110,3 +110,26 @@ def test_pdm_sync_job_uses_branch_lifecycle_for_orm_reconciliation() -> None:
 
     assert '"activate_branch_context"' in lifecycle
     assert "from netbox_branching.utilities import activate_branch" in lifecycle
+
+
+def test_plugin_config_bounds_come_from_the_shared_compat_module() -> None:
+    """The declared bounds must be sourced from compat.py, not re-typed literals.
+
+    Two copies of the supported range would drift silently. The stable ceiling
+    (4.6.99) and the declared ceiling (4.7.99) are deliberately different: 4.7 is
+    admitted on an experimental basis, so ``max_version`` is the experimental one.
+    """
+    pytest.importorskip("netbox")
+    from netbox_pdm import config
+    from netbox_pdm.compat import (
+        EXPERIMENTAL_MAX_NETBOX_VERSION,
+        PLUGIN_MAX_VERSION,
+        PLUGIN_MIN_VERSION,
+        STABLE_MAX_NETBOX_VERSION,
+        STABLE_MIN_NETBOX_VERSION,
+    )
+
+    assert config.min_version == PLUGIN_MIN_VERSION == STABLE_MIN_NETBOX_VERSION
+    assert config.max_version == PLUGIN_MAX_VERSION == EXPERIMENTAL_MAX_NETBOX_VERSION
+    assert STABLE_MAX_NETBOX_VERSION == "4.6.99"
+    assert EXPERIMENTAL_MAX_NETBOX_VERSION == "4.7.99"
