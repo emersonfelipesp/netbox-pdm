@@ -133,3 +133,24 @@ def test_plugin_config_bounds_come_from_the_shared_compat_module() -> None:
     assert config.max_version == PLUGIN_MAX_VERSION == EXPERIMENTAL_MAX_NETBOX_VERSION
     assert STABLE_MAX_NETBOX_VERSION == "4.6.99"
     assert EXPERIMENTAL_MAX_NETBOX_VERSION == "4.7.99"
+
+
+def test_packaging_is_a_declared_dependency() -> None:
+    """`compat.py` imports packaging at module scope, so the metadata must say so.
+
+    Inside a NetBox install it happens to be present transitively — NetBox core
+    uses it on the very same `PluginConfig.validate` path — and pytest drags it
+    in during CI. Neither is a declaration. Without this the wheel's metadata
+    misstates what the package imports, and a consumer resolving it outside a
+    NetBox environment gets an ImportError at plugin import time.
+    """
+    import tomllib
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    data = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    declared = data["project"]["dependencies"]
+
+    assert any(spec.split(">=")[0].strip() == "packaging" for spec in declared), (
+        f"packaging must be declared in [project.dependencies]; got {declared}"
+    )
