@@ -2,3 +2,8 @@ mkdocs>=1.6
 mkdocs-material>=9.5
 mkdocstrings[python]>=0.27
 ghp-import>=2.1
+
+# Transitive via requests/httpx, which ask only for a floor that still admits
+# GHSA-65pc-fj4g-8rjx (idna <=3.10). This file is installed with a plain
+# `pip install -r`, which reads no lockfile, so the floor has to be declared here.
+idna>=3.15
