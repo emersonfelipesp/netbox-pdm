@@ -11,21 +11,20 @@ whole Proxbox plugin stack (`netbox-proxbox`, `netbox-ceph`, `netbox-packer`,
 
 | Tier | NetBox range | Constant | Behaviour |
 |---|---|---|---|
-| **Stable** | `4.5.8` – `4.6.99` | `STABLE_MIN_NETBOX_VERSION` / `STABLE_MAX_NETBOX_VERSION` | Admitted silently. Directly exercised in CI at v4.5.8 through v4.6.4 (Docker image matrix); the rest of the band is admitted on the strength of those. |
-| **Experimental** | `4.7.0` – `4.7.99` | `EXPERIMENTAL_MIN_NETBOX_VERSION` / `EXPERIMENTAL_MAX_NETBOX_VERSION` | Loads and runs normally; warns once via system check `netbox_pdm.W001`. |
+| **Stable** | `4.5.8` – `4.6.99` | `STABLE_MIN_NETBOX_VERSION` / `STABLE_MAX_NETBOX_VERSION` | Admitted silently. Directly exercised in CI through v4.6.6; the rest of the band is admitted on that evidence. |
+| **Held beta** | canonical `4.7.0-beta2` metadata only | numeric 4.7 constants plus the release-identity guard | Loads and runs normally; warns once via `netbox_pdm.W001`. Final 4.7.0 and every other 4.7 identity are rejected. |
 
-`PluginConfig.min_version` is the stable floor; `PluginConfig.max_version` is the
-**experimental** ceiling (`4.7.99`). Admitting 4.7 without an opt-in is
-deliberate — an operator upgrading NetBox never has to touch plugin
-configuration. Experimental support needs no setting, no flag, and no extra
-install step.
+`PluginConfig.min_version` is the stable floor and `PluginConfig.max_version`
+is the held numeric ceiling (`4.7.0`). The shared v3 guard reads canonical
+release metadata and admits only designation `beta2`; local metadata may add a
+build label but cannot replace version or designation.
 
 On a 4.7 install you will see one warning per plugin, from `manage.py check` and
 in the startup log:
 
 ```
 WARNINGS:
-?: (netbox_pdm.W001) NetBox PDM is running on NetBox 4.7.0-beta1, which is
+?: (netbox_pdm.W001) NetBox PDM is running on NetBox 4.7.0-beta2, which is
    supported on an experimental basis only. Certified support covers NetBox
    4.5.8 through 4.6.99.
 ```
@@ -48,8 +47,8 @@ That silences both the system check and the startup log line.
 > It only applies through NetBox's `local_settings.py` hatch, which upstream
 > labels unsupported. Use the `PLUGINS_CONFIG` key above.
 
-NetBox below `4.5.8` and from `4.8` onward is still refused outright by NetBox's
-own plugin version gate.
+NetBox below `4.5.8`, final 4.7.0, other 4.7 identities, and 4.8+ are refused by
+the stock numeric gate plus the held-line identity guard.
 
 > **These tiers describe the *next* release, not the currently published
 > package.** Every artifact published before this change declares
@@ -70,9 +69,10 @@ normal production deployment, so the visible symptom is not an error but an
 background jobs are simply gone, and anything that depended on them fails later
 and further away. A health probe against NetBox itself still returns 200.
 
-So before moving an instance to 4.7, upgrade **every** installed Proxbox-family
-plugin to a release carrying the `4.7.99` ceiling, and afterwards verify each
-one is actually registered rather than trusting that NetBox started:
+So before moving an instance to beta2, upgrade **every** installed
+Proxbox-family plugin to a release carrying compatibility contract v3, and
+afterwards verify each one is actually registered rather than trusting that
+NetBox started:
 
 ```bash
 python manage.py shell -c "from django.apps import apps; print([p for p in ('netbox_proxbox','netbox_pbs','netbox_pdm','netbox_ceph','netbox_packer') if apps.is_installed(p)])"
@@ -98,14 +98,18 @@ fail closed is tracked separately.
 
 Installations that do not use branching are unaffected.
 
-**Beta version strings.** NetBox's `release.yaml` at tag `v4.7.0-beta1` reads
-`version: "4.7.0"` with `designation: "beta1"`, and `netbox/settings.py` passes
-`RELEASE.version` — the bare `"4.7.0"` — to `PluginConfig.validate()`. The
-`4.7.99` ceiling is sized for that comparison string; `RELEASE.full_version`
-(`"4.7.0-beta1"`) is used only for display.
+**Beta version strings.** NetBox's canonical `release.yaml` at beta2 reads
+`version: "4.7.0"` with `designation: "beta2"`, while the stock plugin gate
+receives only bare `RELEASE.version`. The numeric ceiling is therefore `4.7.0`;
+the separate metadata guard distinguishes beta2 from GA and other prereleases.
+
+**Current pre-release evidence.** A required source-checkout job runs PDM and
+its required Proxbox dependency on exact NetBox `v4.7.0-beta2` commit
+`aa1d49d0f5021a28e6efc2d0364b84c5bcec7137`. The stable Docker matrix now
+extends through v4.6.6 and remains the backward-compatibility evidence.
 
 | netbox-pdm | NetBox | Python | netbox-proxbox peer plugin | proxbox-api | PDM client |
 |---|---|---|---|---|---|
-| v0.0.2 | v4.5.8, v4.5.9, v4.6.0-v4.6.4 | ≥3.12 | >=0.0.18,<0.1.0 | Required | proxmox-sdk>=0.0.12 |
+| v0.0.2 branch | v4.5.8-v4.6.6 plus held v4.7.0-beta2 | ≥3.12 | >=0.0.18,<0.1.0 | Required | proxmox-sdk>=0.0.12 |
 | v0.0.1.post1 | 4.5.8 – 4.6.x | ≥3.12 | >=0.0.18,<0.1.0 | Required | ≥2.33.0 |
 | v0.0.1 | 4.5.x – 4.6.x | ≥3.12 | ≥0.0.16.post5 | Required | ≥2.33.0 |

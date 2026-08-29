@@ -124,8 +124,9 @@ than re-typed as literals:
 
 - **stable** `4.5.8` – `4.6.99` — admitted silently; specific versions in
   this band are exercised in CI, the rest are admitted on their strength;
-- **experimental** `4.7.0` – `4.7.99` — loads and runs with no configuration
-  change, and emits system check `netbox_pdm.W001` (a **Warning**, never an Error)
+- **held beta** canonical `4.7.0-beta2` metadata only — the numeric ceiling is
+  `4.7.0`, the v3 identity guard rejects GA/other 4.7 identities, and the
+  admitted beta emits `netbox_pdm.W001` (a **Warning**, never an Error)
   plus one `ready()` log line. A version that cannot be classified reports
   `netbox_pdm.W002` rather than passing silently. Operators silence the notice with the
   `silence_netbox_compatibility_warning` key in this plugin's
@@ -152,8 +153,7 @@ Two hard rules:
    against NetBox still passes. Verify registration with `apps.is_installed()`
    after any upgrade rather than trusting that NetBox came up.
 
-Beta release strings are why the ceiling is `4.7.99` and not something
-pre-release-shaped: `release.yaml` at tag `v4.7.0-beta1` reads `version: "4.7.0"`
-with `designation: "beta1"`, and the plugin gate compares against
-`RELEASE.version` — the bare `"4.7.0"`. `RELEASE.full_version`
-(`"4.7.0-beta1"`) is display only.
+NetBox passes bare `RELEASE.version` (`"4.7.0"`) to the plugin gate. Contract v3
+therefore reads canonical `release.yaml`, requires designation `beta2`, and
+permits only a build label in local metadata. CI pins exact beta2 source
+revision `aa1d49d0f5021a28e6efc2d0364b84c5bcec7137`; runtime attests metadata.

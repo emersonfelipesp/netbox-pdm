@@ -15,10 +15,9 @@ The Django-dependent paths inject their own ``django.conf`` /
 ``django.core.checks`` modules, so they behave identically with or without a
 real Django present.
 
-``NetBoxPDMConfig``'s actual wiring against a real NetBox is covered by the
-NetBox-version CI matrix tracked in netbox-proxbox #323; this plugin declares
-``required_plugins``, so it cannot load on 4.7 until netbox-proxbox ships the
-matching ceiling.
+``NetBoxPDMConfig``'s actual wiring, the plugin's registration in the app registry,
+and Django's real check registry are verified by
+``tests/test_netbox_compat_django.py`` against a real NetBox.
 """
 
 from __future__ import annotations
@@ -36,19 +35,19 @@ from packaging.version import parse as parse_version
 
 # ---------------------------------------------------------------------------
 # Facts transcribed once from upstream NetBox, deliberately NOT derived from
-# the module under test. netbox/release.yaml at tag v4.7.0-beta1 reads:
+# the module under test. netbox/release.yaml at tag v4.7.0-beta2 reads:
 #
 #     version: "4.7.0"
-#     designation: "beta1"
+#     designation: "beta2"
 #
 # and netbox/netbox/settings.py calls
 # `plugin_config.validate(PLUGINS_CONFIG[plugin_name], RELEASE.version)`.
 # So the plugin gate compares against the bare "4.7.0" while operators see
-# "4.7.0-beta1". If either stops being true upstream, these tests must fail
+# "4.7.0-beta2". If either stops being true upstream, these tests must fail
 # rather than quietly track the change.
 # ---------------------------------------------------------------------------
-NETBOX_470_BETA1_COMPARISON_VERSION = "4.7.0"
-NETBOX_470_BETA1_DISPLAY_VERSION = "4.7.0-beta1"
+NETBOX_470_BETA2_COMPARISON_VERSION = "4.7.0"
+NETBOX_470_BETA2_DISPLAY_VERSION = "4.7.0-beta2"
 
 
 def _load_compat_module() -> Any:
@@ -193,13 +192,14 @@ def test_compat_imports_no_django_at_module_scope() -> None:
         ("4.6.4", "stable"),
         ("4.6.6", "stable"),
         ("4.6.99", "stable"),
-        # Experimental band — loads, warns, never blocks.
+        # Numeric held line. The separate canonical identity guard narrows
+        # this bare value to beta2.
         ("4.7.0", "experimental"),
-        ("4.7.0-beta1", "experimental"),
-        ("4.7.0b1", "experimental"),
-        ("4.7.3", "experimental"),
-        ("4.7.99", "experimental"),
-        # Above the ceiling — refused again.
+        ("4.7.0-beta2", "experimental"),
+        ("4.7.0b2", "experimental"),
+        # Above the exact bare 4.7.0 ceiling — refused again.
+        ("4.7.3", "unsupported-new"),
+        ("4.7.99", "unsupported-new"),
         ("4.8.0", "unsupported-new"),
         ("5.0.0", "unsupported-new"),
     ],
@@ -228,28 +228,28 @@ def test_unparseable_version_raises_rather_than_defaulting_to_supported() -> Non
 # ---------------------------------------------------------------------------
 
 
-def test_plugin_gate_admits_the_470_beta1_comparison_string() -> None:
+def test_plugin_gate_admits_the_470_beta2_comparison_string() -> None:
     """Reproduce NetBox's own gate arithmetic against the real beta version.
 
     ``PluginConfig.validate()`` does
     ``version.parse(netbox_version) > version.parse(max_version)``. This asserts
     the declared ceiling actually admits what NetBox will pass in.
     """
-    current = parse_version(NETBOX_470_BETA1_COMPARISON_VERSION)
+    current = parse_version(NETBOX_470_BETA2_COMPARISON_VERSION)
     assert current >= parse_version(PLUGIN_MIN_VERSION)
     assert current <= parse_version(PLUGIN_MAX_VERSION)
 
 
-def test_the_previous_ceiling_would_have_rejected_470_beta1() -> None:
+def test_the_previous_ceiling_would_have_rejected_470_beta2() -> None:
     """Guard the guard: prove 4.6.99 really was the blocker being removed."""
-    assert parse_version(NETBOX_470_BETA1_COMPARISON_VERSION) > parse_version("4.6.99")
+    assert parse_version(NETBOX_470_BETA2_COMPARISON_VERSION) > parse_version("4.6.99")
 
 
 def test_comparison_and_display_strings_classify_identically() -> None:
     """Whichever form reaches the classifier, the verdict must be the same."""
     assert (
-        netbox_support_level(NETBOX_470_BETA1_COMPARISON_VERSION)
-        is netbox_support_level(NETBOX_470_BETA1_DISPLAY_VERSION)
+        netbox_support_level(NETBOX_470_BETA2_COMPARISON_VERSION)
+        is netbox_support_level(NETBOX_470_BETA2_DISPLAY_VERSION)
         is NetBoxSupportLevel.EXPERIMENTAL
     )
 
@@ -259,10 +259,10 @@ def test_declared_bounds_have_the_expected_literal_values() -> None:
     assert STABLE_MIN_NETBOX_VERSION == "4.5.8"
     assert STABLE_MAX_NETBOX_VERSION == "4.6.99"
     assert EXPERIMENTAL_MIN_NETBOX_VERSION == "4.7.0"
-    assert EXPERIMENTAL_MAX_NETBOX_VERSION == "4.7.99"
+    assert EXPERIMENTAL_MAX_NETBOX_VERSION == "4.7.0"
     assert PLUGIN_MIN_VERSION == STABLE_MIN_NETBOX_VERSION
     assert PLUGIN_MAX_VERSION == EXPERIMENTAL_MAX_NETBOX_VERSION
-    assert CONTRACT_VERSION == "netbox-compat-v2"
+    assert CONTRACT_VERSION == "netbox-compat-v4"
 
 
 # ---------------------------------------------------------------------------
@@ -274,14 +274,14 @@ def test_detect_netbox_version_splits_comparison_from_display(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
-        VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
+        RELEASE=_FakeRelease(NETBOX_470_BETA2_COMPARISON_VERSION, NETBOX_470_BETA2_DISPLAY_VERSION),
+        VERSION=NETBOX_470_BETA2_DISPLAY_VERSION,
     )
     _install_fake_django(monkeypatch, settings)
 
     assert detect_netbox_version() == (
-        NETBOX_470_BETA1_COMPARISON_VERSION,
-        NETBOX_470_BETA1_DISPLAY_VERSION,
+        NETBOX_470_BETA2_COMPARISON_VERSION,
+        NETBOX_470_BETA2_DISPLAY_VERSION,
     )
 
 
@@ -314,8 +314,8 @@ def test_experimental_version_emits_exactly_one_warning(
 ) -> None:
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
-        VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
+        RELEASE=_FakeRelease(NETBOX_470_BETA2_COMPARISON_VERSION, NETBOX_470_BETA2_DISPLAY_VERSION),
+        VERSION=NETBOX_470_BETA2_DISPLAY_VERSION,
     )
     registered = _install_fake_django(monkeypatch, settings)
 
@@ -328,11 +328,11 @@ def test_experimental_version_emits_exactly_one_warning(
     # A maturity notice must never be an Error — that would block startup.
     assert type(results[0]).__name__ == "Warning"
     assert results[0].level == 30
-    assert NETBOX_470_BETA1_DISPLAY_VERSION in results[0].msg
+    assert NETBOX_470_BETA2_DISPLAY_VERSION in results[0].msg
     assert SILENCE_SETTING_NAME in (results[0].hint or "")
 
     # And the same notice reaches operators who never run `manage.py check`.
-    assert any(NETBOX_470_BETA1_DISPLAY_VERSION in record.getMessage() for record in caplog.records)
+    assert any(NETBOX_470_BETA2_DISPLAY_VERSION in record.getMessage() for record in caplog.records)
 
 
 @pytest.mark.parametrize("stable_version", ["4.5.8", "4.6.0", "4.6.4", "4.6.99"])
@@ -374,8 +374,8 @@ def test_registration_is_idempotent(monkeypatch: pytest.MonkeyPatch) -> None:
     """A second ready() must not double the operator-facing warning."""
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
-        VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
+        RELEASE=_FakeRelease(NETBOX_470_BETA2_COMPARISON_VERSION, NETBOX_470_BETA2_DISPLAY_VERSION),
+        VERSION=NETBOX_470_BETA2_DISPLAY_VERSION,
     )
     registered = _install_fake_django(monkeypatch, settings)
 
@@ -386,9 +386,9 @@ def test_registration_is_idempotent(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_experimental_warning_message_names_the_certified_range() -> None:
-    message = experimental_warning_message("NetBox PDM", NETBOX_470_BETA1_DISPLAY_VERSION)
+    message = experimental_warning_message("NetBox PDM", NETBOX_470_BETA2_DISPLAY_VERSION)
     assert "NetBox PDM" in message
-    assert NETBOX_470_BETA1_DISPLAY_VERSION in message
+    assert NETBOX_470_BETA2_DISPLAY_VERSION in message
     assert STABLE_MIN_NETBOX_VERSION in message
     assert STABLE_MAX_NETBOX_VERSION in message
 
@@ -401,8 +401,8 @@ def test_experimental_warning_message_names_the_certified_range() -> None:
 @pytest.mark.parametrize(
     ("display_version", "expected"),
     [
-        ("4.7.0-beta1", True),
-        ("4.7.0b1", True),
+        ("4.7.0-beta2", True),
+        ("4.7.0b2", True),
         ("4.7.0-rc1", True),
         ("4.7.0", False),
         ("4.7.2", False),
@@ -414,7 +414,7 @@ def test_experimental_warning_message_names_the_certified_range() -> None:
         # parse returns False here and silently drops the pre-release caveat on
         # every containerised install — the deployment most likely to be running
         # a beta in the first place.
-        ("4.7.0-beta1-Docker-3.4.0", True),
+        ("4.7.0-beta2-Docker-3.4.0", True),
         ("4.7.0-rc1-Docker-3.4.0", True),
         ("4.7.0-Docker-3.4.0", False),
         ("4.6.4-Docker-3.3.0", False),
@@ -429,7 +429,7 @@ def test_prerelease_detection(display_version: str, expected: bool) -> None:
     [
         # The designation is authoritative: NetBox leaves it unset on a stable
         # release, so any value means pre-release regardless of the string.
-        ("4.7.0-Docker-3.4.0", "beta1", True),
+        ("4.7.0-Docker-3.4.0", "beta2", True),
         ("totally unparseable", "rc2", True),
         ("4.7.0", None, False),
         ("4.7.0", "", False),
@@ -454,7 +454,7 @@ def test_prerelease_warning_states_the_upstream_restriction() -> None:
     path from a pre-release to GA, so the notice must say so rather than leave
     an operator with only the word "experimental".
     """
-    message = experimental_warning_message("NetBox PDM", NETBOX_470_BETA1_DISPLAY_VERSION)
+    message = experimental_warning_message("NetBox PDM", NETBOX_470_BETA2_DISPLAY_VERSION)
     lowered = message.lower()
     assert "pre-release" in lowered
     assert "production" in lowered
@@ -473,8 +473,8 @@ def test_prerelease_hint_does_not_read_as_production_clearance(
 ) -> None:
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
-        VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
+        RELEASE=_FakeRelease(NETBOX_470_BETA2_COMPARISON_VERSION, NETBOX_470_BETA2_DISPLAY_VERSION),
+        VERSION=NETBOX_470_BETA2_DISPLAY_VERSION,
     )
     registered = _install_fake_django(monkeypatch, settings)
 
@@ -504,8 +504,8 @@ def test_silencing_the_check_also_silences_the_startup_log(
     """
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
-        VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
+        RELEASE=_FakeRelease(NETBOX_470_BETA2_COMPARISON_VERSION, NETBOX_470_BETA2_DISPLAY_VERSION),
+        VERSION=NETBOX_470_BETA2_DISPLAY_VERSION,
         SILENCED_SYSTEM_CHECKS=["netbox_pdm.W001"],
     )
     _install_fake_django(monkeypatch, settings)
@@ -522,8 +522,8 @@ def test_silencing_a_different_check_does_not_silence_ours(
     """Guard the guard: the suppression must be keyed on our own id."""
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
-        VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
+        RELEASE=_FakeRelease(NETBOX_470_BETA2_COMPARISON_VERSION, NETBOX_470_BETA2_DISPLAY_VERSION),
+        VERSION=NETBOX_470_BETA2_DISPLAY_VERSION,
         SILENCED_SYSTEM_CHECKS=["some_other_plugin.W001", "netbox_pdm.W002"],
     )
     _install_fake_django(monkeypatch, settings)
@@ -540,8 +540,8 @@ def test_a_missing_silenced_setting_still_shows_the_notice(
     """Suppression fails open — an unreadable setting must not hide the notice."""
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
-        VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
+        RELEASE=_FakeRelease(NETBOX_470_BETA2_COMPARISON_VERSION, NETBOX_470_BETA2_DISPLAY_VERSION),
+        VERSION=NETBOX_470_BETA2_DISPLAY_VERSION,
     )  # no SILENCED_SYSTEM_CHECKS attribute at all
     _install_fake_django(monkeypatch, settings)
 
@@ -570,8 +570,8 @@ def test_plugins_config_silences_both_surfaces(
     """
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
-        VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
+        RELEASE=_FakeRelease(NETBOX_470_BETA2_COMPARISON_VERSION, NETBOX_470_BETA2_DISPLAY_VERSION),
+        VERSION=NETBOX_470_BETA2_DISPLAY_VERSION,
         PLUGINS_CONFIG={"netbox_pdm": {SILENCE_SETTING_NAME: True}},
     )
     registered = _install_fake_django(monkeypatch, settings)
@@ -589,8 +589,8 @@ def test_plugins_config_opt_out_is_keyed_to_this_plugin(
     """Another plugin's opt-out must not silence ours."""
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
-        VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
+        RELEASE=_FakeRelease(NETBOX_470_BETA2_COMPARISON_VERSION, NETBOX_470_BETA2_DISPLAY_VERSION),
+        VERSION=NETBOX_470_BETA2_DISPLAY_VERSION,
         PLUGINS_CONFIG={"some_other_plugin": {SILENCE_SETTING_NAME: True}},
     )
     registered = _install_fake_django(monkeypatch, settings)
@@ -609,8 +609,8 @@ def test_a_falsy_opt_out_still_shows_the_notice(
     """Suppression requires an affirmative value; anything else fails open."""
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
-        VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
+        RELEASE=_FakeRelease(NETBOX_470_BETA2_COMPARISON_VERSION, NETBOX_470_BETA2_DISPLAY_VERSION),
+        VERSION=NETBOX_470_BETA2_DISPLAY_VERSION,
         PLUGINS_CONFIG={"netbox_pdm": {SILENCE_SETTING_NAME: falsy}},
     )
     registered = _install_fake_django(monkeypatch, settings)
@@ -628,8 +628,8 @@ def test_a_malformed_plugins_config_entry_fails_open(
     """A junk entry must not crash startup, and must not hide the notice."""
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
-        VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
+        RELEASE=_FakeRelease(NETBOX_470_BETA2_COMPARISON_VERSION, NETBOX_470_BETA2_DISPLAY_VERSION),
+        VERSION=NETBOX_470_BETA2_DISPLAY_VERSION,
         PLUGINS_CONFIG={"netbox_pdm": "not-a-mapping"},
     )
     registered = _install_fake_django(monkeypatch, settings)
@@ -664,8 +664,8 @@ def test_only_the_literal_boolean_true_silences_the_notice(
     """
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
-        VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
+        RELEASE=_FakeRelease(NETBOX_470_BETA2_COMPARISON_VERSION, NETBOX_470_BETA2_DISPLAY_VERSION),
+        VERSION=NETBOX_470_BETA2_DISPLAY_VERSION,
         PLUGINS_CONFIG={"netbox_pdm": {SILENCE_SETTING_NAME: truthy_but_not_true}},
     )
     registered = _install_fake_django(monkeypatch, settings)

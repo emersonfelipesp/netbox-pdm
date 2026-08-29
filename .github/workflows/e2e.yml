@@ -11,7 +11,7 @@ on:
         description: "NetBox Docker image to test against"
         required: false
         type: string
-        default: "netboxcommunity/netbox:v4.6.4"
+        default: "netboxcommunity/netbox:v4.6.6"
 
 permissions:
   contents: read
@@ -31,6 +31,7 @@ jobs:
           - netboxcommunity/netbox:v4.6.2
           - netboxcommunity/netbox:v4.6.3
           - netboxcommunity/netbox:v4.6.4
+          - netboxcommunity/netbox:v4.6.6
     env:
       NETBOX_IMAGE: ${{ inputs.netbox_image || matrix.netbox_image }}
     steps:
@@ -66,3 +67,78 @@ jobs:
           name: netbox-pdm-wheel
           path: dist/*.whl
           if-no-files-found: error
+
+  netbox-beta2-compatibility:
+    name: NetBox v4.7.0-beta2 exact-source compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: netbox
+          POSTGRES_PASSWORD: netbox
+          POSTGRES_DB: netbox
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U netbox"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v6
+
+      - name: Checkout exact NetBox beta2 source
+        uses: actions/checkout@v6
+        with:
+          repository: netbox-community/netbox
+          ref: aa1d49d0f5021a28e6efc2d0364b84c5bcec7137
+          path: netbox-source
+          persist-credentials: false
+
+      - name: Checkout the 4.7-capable Proxbox contract
+        uses: actions/checkout@v6
+        with:
+          repository: emersonfelipesp/netbox-proxbox
+          ref: 24dde6a9095a84efdaa0e07a60c9728c2372e235
+          path: netbox-proxbox
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install exact test stack
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r netbox-source/requirements.txt
+          python -m pip install -e ./netbox-proxbox
+          python -m pip install -e ".[test]"
+
+      - name: Assert immutable NetBox checkout
+        run: test "$(git -C netbox-source rev-parse HEAD)" = aa1d49d0f5021a28e6efc2d0364b84c5bcec7137
+
+      - name: Migrate, check, and render registered views
+        env:
+          NETBOX_CONFIGURATION: tests.netbox_test_configuration
+          DJANGO_SETTINGS_MODULE: netbox.settings
+          NETBOX_PDM_REQUIRE_DJANGO: "1"
+          PYTHONPATH: ${{ github.workspace }}/netbox-source/netbox:${{ github.workspace }}/netbox-proxbox:${{ github.workspace }}
+        run: |
+          python netbox-source/netbox/manage.py check
+          python netbox-source/netbox/manage.py migrate --no-input
+          python netbox-source/netbox/manage.py makemigrations netbox_pdm --check --dry-run
+          pytest tests/test_netbox_compat_django.py \
+            tests/test_list_view_render_django.py \
+            --reuse-db --create-db

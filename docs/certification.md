@@ -7,7 +7,7 @@ read-only companion plugin for Proxmox Datacenter Manager inventory.
 | --- | --- |
 | License | Apache-2.0 in the repository and package metadata |
 | Package | Published as `netbox-pdm` on PyPI with source, docs, and issues URLs |
-| Compatibility | NetBox `4.5.8` through `4.6.4`; verified against `v4.5.8`, `v4.5.9`, `v4.6.0`, `v4.6.1`, `v4.6.2`, `v4.6.3`, and `v4.6.4` |
+| Compatibility | Stable NetBox `4.5.8`–`4.6.99`, matrix-tested through v4.6.6; canonical beta2 metadata tested at exact revision `aa1d49d0f5021a28e6efc2d0364b84c5bcec7137` |
 | Tests | GitHub Actions run lint, compile, pytest, Docker install smoke, page coverage, and release validation |
 | Docs | README plus MkDocs installation, roadmap, certification, and release-note pages |
 | Screenshots | `docs-screenshots.yml` captures NetBox v4.6.4 UI screenshots on release tags or manual dispatch |

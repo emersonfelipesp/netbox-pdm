@@ -1,0 +1,87 @@
+name: CI
+
+# Authoritative Gitea pre-merge gate. Pull-request code runs only on the
+# unprivileged `ci-untrusted-python312` container of the dedicated
+# credentials-free CI VM. That container has no NetBox installation, no
+# database, and no Redis, so this gate covers lint, compilation, the hermetic
+# suite, and packaging; the real-NetBox matrix stays in GitHub Actions.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: netbox-pdm-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Python 3.12 quality and package gate
+    runs-on: ci-untrusted-python312
+    timeout-minutes: 30
+    env:
+      HOME: ${{ github.workspace }}
+      UV_CACHE_DIR: ${{ github.workspace }}/.uv-cache
+      UV_PYTHON_DOWNLOADS: never
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Check out the exact netbox-proxbox authority contract
+        shell: bash
+        env:
+          NETBOX_PROXBOX_SHA: 24dde6a9095a84efdaa0e07a60c9728c2372e235 # v0.0.23.post2
+        run: |
+          set -eo pipefail
+          git clone --no-checkout https://git.nmulti.cloud/emersonfelipesp/netbox-proxbox.git netbox-proxbox
+          git -C netbox-proxbox checkout --detach "$NETBOX_PROXBOX_SHA"
+          test "$(git -C netbox-proxbox rev-parse HEAD)" = "$NETBOX_PROXBOX_SHA"
+
+      - name: Create isolated environment
+        shell: bash
+        run: |
+          set -eo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          uv venv --python 3.12
+          uv pip install -e ./netbox-proxbox
+          uv pip install -e . --no-deps
+          uv pip install \
+            "pytest>=8.0.0" \
+            "pytest-django>=4.0.0" \
+            "pyyaml>=6.0.0" \
+            "requests>=2.33.0" \
+            "ruff==0.15.8" \
+            "build==1.5.0" \
+            "twine==6.2.0"
+
+      - name: Static checks
+        shell: bash
+        run: |
+          set -eo pipefail
+          .venv/bin/ruff check .
+          .venv/bin/python -m compileall -q netbox_pdm tests
+
+      - name: Hermetic suite
+        shell: bash
+        run: |
+          set -eo pipefail
+          # test_netbox_compat_django.py boots a real NetBox/Django stack, which
+          # this container does not have; GitHub Actions runs it.
+          .venv/bin/python -m pytest -p no:cacheprovider tests \
+            --ignore=tests/e2e \
+            --ignore=tests/test_netbox_compat_django.py -q
+
+      - name: Build and check distribution
+        shell: bash
+        run: |
+          set -eo pipefail
+          .venv/bin/python -m build
+          .venv/bin/python -m twine check dist/*

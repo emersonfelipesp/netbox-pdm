@@ -17,6 +17,7 @@ SUPPORTED_NETBOX_IMAGES = (
     "netboxcommunity/netbox:v4.6.2",
     "netboxcommunity/netbox:v4.6.3",
     "netboxcommunity/netbox:v4.6.4",
+    "netboxcommunity/netbox:v4.6.6",
 )
 
 
@@ -38,7 +39,9 @@ def test_plugin_config_exposes_required_attrs() -> None:
     data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert cfg.version == data["project"]["version"]
     assert cfg.min_version == "4.5.8"
-    assert cfg.max_version == "4.7.99"
+    assert cfg.max_version == "4.7.0"
+    assert cfg.approved_netbox_version == "4.7.0"
+    assert cfg.approved_netbox_designation == "beta2"
     assert cfg.required_plugins == ["netbox_proxbox"]
     assert cfg.author_email == "emersonfelipe.2003@gmail.com"
 
@@ -64,6 +67,10 @@ def test_e2e_workflow_covers_supported_netbox_versions() -> None:
 
     for image in SUPPORTED_NETBOX_IMAGES:
         assert image in workflow
+    assert "netbox-beta2-compatibility:" in workflow
+    assert "aa1d49d0f5021a28e6efc2d0364b84c5bcec7137" in workflow
+    assert "24dde6a9095a84efdaa0e07a60c9728c2372e235" in workflow
+    assert "tests/test_netbox_compat_django.py" in workflow
 
 
 def test_docs_name_supported_netbox_versions() -> None:
@@ -81,6 +88,9 @@ def test_docs_name_supported_netbox_versions() -> None:
 
     for image in SUPPORTED_NETBOX_IMAGES:
         assert image.rsplit(":", 1)[1] in docs
+
+    assert "v4.7.0-beta2" in docs
+    assert "aa1d49d0f5021a28e6efc2d0364b84c5bcec7137" in docs
 
 
 def test_pdm_sync_job_persists_result_data() -> None:
@@ -115,8 +125,8 @@ def test_plugin_config_bounds_come_from_the_shared_compat_module() -> None:
     """The declared bounds must be sourced from compat.py, not re-typed literals.
 
     Two copies of the supported range would drift silently. The stable ceiling
-    (4.6.99) and the declared ceiling (4.7.99) are deliberately different: 4.7 is
-    admitted on an experimental basis, so ``max_version`` is the experimental one.
+    (4.6.99) and held numeric ceiling (4.7.0) are deliberately different; the
+    release-identity guard narrows that bare value to canonical beta2.
     """
     pytest.importorskip("netbox")
     from netbox_pdm import config
@@ -131,7 +141,7 @@ def test_plugin_config_bounds_come_from_the_shared_compat_module() -> None:
     assert config.min_version == PLUGIN_MIN_VERSION == STABLE_MIN_NETBOX_VERSION
     assert config.max_version == PLUGIN_MAX_VERSION == EXPERIMENTAL_MAX_NETBOX_VERSION
     assert STABLE_MAX_NETBOX_VERSION == "4.6.99"
-    assert EXPERIMENTAL_MAX_NETBOX_VERSION == "4.7.99"
+    assert EXPERIMENTAL_MAX_NETBOX_VERSION == "4.7.0"
 
 
 def test_packaging_is_a_declared_dependency() -> None:
@@ -153,3 +163,4 @@ def test_packaging_is_a_declared_dependency() -> None:
     assert any(spec.split(">=")[0].strip() == "packaging" for spec in declared), (
         f"packaging must be declared in [project.dependencies]; got {declared}"
     )
+    assert any(spec.lower().startswith("pyyaml") for spec in declared)
