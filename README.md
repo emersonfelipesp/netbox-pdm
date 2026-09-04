@@ -68,13 +68,13 @@ metadata, GitHub Actions CI, release validation, docs publishing, screenshot
 capture, and page-coverage workflows for NetBox v4.6.4. Docker install smoke
 coverage spans NetBox v4.5.8 through v4.6.6.
 
-Canonical NetBox `v4.7.0-beta2` metadata is admitted on a **release-held**
-basis and warns once at startup; final 4.7.0 and every other 4.7 identity fail
-closed. CI pins exact source revision
-`aa1d49d0f5021a28e6efc2d0364b84c5bcec7137`, while runtime verifies canonical
+Official NetBox `v4.7.0` GA is admitted in the stable backward-compatible
+`4.5.8`–`4.7.99` range. Pre-release identities warn once at startup and are not
+production support. CI pins the exact GA source revision
+`5f06007e4c9bacc93ce17c1e645fc1143d60df3d`, while runtime verifies canonical
 release metadata. See [COMPATIBILITY.md](COMPATIBILITY.md) for the tier
 table, how to silence the notice, and why every Proxbox-family plugin must be
-upgraded together before moving an instance to beta2.
+upgraded together before moving an instance to NetBox 4.7 GA.
 
 ## License
 

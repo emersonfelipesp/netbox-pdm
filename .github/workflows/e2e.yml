@@ -32,6 +32,7 @@ jobs:
           - netboxcommunity/netbox:v4.6.3
           - netboxcommunity/netbox:v4.6.4
           - netboxcommunity/netbox:v4.6.6
+          - netboxcommunity/netbox:v4.7.0-5.1.0@sha256:73a54ff279461170032b59a57a1930929965e3ba15c195af59f4b5f6d39a84a9
     env:
       NETBOX_IMAGE: ${{ inputs.netbox_image || matrix.netbox_image }}
     steps:
@@ -68,8 +69,8 @@ jobs:
           path: dist/*.whl
           if-no-files-found: error
 
-  netbox-beta2-compatibility:
-    name: NetBox v4.7.0-beta2 exact-source compatibility
+  netbox-ga-compatibility:
+    name: NetBox v4.7.0 exact-source compatibility
     runs-on: ubuntu-latest
     timeout-minutes: 45
     services:
@@ -97,11 +98,11 @@ jobs:
       - name: Checkout plugin
         uses: actions/checkout@v6
 
-      - name: Checkout exact NetBox beta2 source
+      - name: Checkout exact NetBox GA source
         uses: actions/checkout@v6
         with:
           repository: netbox-community/netbox
-          ref: aa1d49d0f5021a28e6efc2d0364b84c5bcec7137
+          ref: 5f06007e4c9bacc93ce17c1e645fc1143d60df3d
           path: netbox-source
           persist-credentials: false
 
@@ -127,7 +128,7 @@ jobs:
           python -m pip install -e ".[test]"
 
       - name: Assert immutable NetBox checkout
-        run: test "$(git -C netbox-source rev-parse HEAD)" = aa1d49d0f5021a28e6efc2d0364b84c5bcec7137
+        run: test "$(git -C netbox-source rev-parse HEAD)" = 5f06007e4c9bacc93ce17c1e645fc1143d60df3d
 
       - name: Migrate, check, and render registered views
         env:

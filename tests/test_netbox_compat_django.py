@@ -24,9 +24,8 @@ def test_plugin_is_installed_and_current_release_is_admitted() -> None:
     assert parse(config.min_version) <= current <= parse(config.max_version)
 
 
-def test_experimental_release_emits_one_nonblocking_notice() -> None:
+def test_stable_release_emits_no_compatibility_notice() -> None:
     from django.core.checks import run_checks
 
     messages = [message for message in run_checks() if message.id.startswith("netbox_pdm.W")]
-    assert [message.id for message in messages] == ["netbox_pdm.W001"]
-    assert messages[0].level < 40
+    assert messages == []

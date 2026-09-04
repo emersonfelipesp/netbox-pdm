@@ -11,22 +11,22 @@ whole Proxbox plugin stack (`netbox-proxbox`, `netbox-ceph`, `netbox-packer`,
 
 | Tier | NetBox range | Constant | Behaviour |
 |---|---|---|---|
-| **Stable** | `4.5.8` – `4.6.99` | `STABLE_MIN_NETBOX_VERSION` / `STABLE_MAX_NETBOX_VERSION` | Admitted silently. Directly exercised in CI through v4.6.6; the rest of the band is admitted on that evidence. |
-| **Held beta** | canonical `4.7.0-beta2` metadata only | numeric 4.7 constants plus the release-identity guard | Loads and runs normally; warns once via `netbox_pdm.W001`. Final 4.7.0 and every other 4.7 identity are rejected. |
+| **Stable** | `4.5.8` – `4.7.99` | `STABLE_MIN_NETBOX_VERSION` / `STABLE_MAX_NETBOX_VERSION` | Admitted silently. CI exercises the established 4.5/4.6 cells and official v4.7.0 GA. |
+| **Experimental** | Pre-release builds within the declared `4.5.8`–`4.7.99` loader range | Derived by `compat.py` | Loads for evaluation and warns once via system check `netbox_pdm.W001`; it is not production support. |
 
-`PluginConfig.min_version` is the stable floor and `PluginConfig.max_version`
-is the held numeric ceiling (`4.7.0`). The shared v3 guard reads canonical
-release metadata and admits only designation `beta2`; local metadata may add a
-build label but cannot replace version or designation.
+`PluginConfig.min_version` and `PluginConfig.max_version` are sourced from the
+shared v5 compatibility contract, which admits the stable `4.5.8`–`4.7.99`
+range and classifies pre-release designations as experimental. Local release
+metadata is advisory only and cannot widen the loader range.
 
 On a 4.7 install you will see one warning per plugin, from `manage.py check` and
 in the startup log:
 
 ```
 WARNINGS:
-?: (netbox_pdm.W001) NetBox PDM is running on NetBox 4.7.0-beta2, which is
+?: (netbox_pdm.W001) NetBox PDM is running on NetBox 4.7.0, which is
    supported on an experimental basis only. Certified support covers NetBox
-   4.5.8 through 4.6.99.
+   4.5.8 through 4.7.99.
 ```
 
 It is a warning, never an error — it cannot block NetBox from starting.
@@ -47,8 +47,7 @@ That silences both the system check and the startup log line.
 > It only applies through NetBox's `local_settings.py` hatch, which upstream
 > labels unsupported. Use the `PLUGINS_CONFIG` key above.
 
-NetBox below `4.5.8`, final 4.7.0, other 4.7 identities, and 4.8+ are refused by
-the stock numeric gate plus the held-line identity guard.
+NetBox below `4.5.8` and 4.8+ are refused by the stock numeric gate.
 
 > **These tiers describe the *next* release, not the currently published
 > package.** Every artifact published before this change declares
@@ -69,8 +68,8 @@ normal production deployment, so the visible symptom is not an error but an
 background jobs are simply gone, and anything that depended on them fails later
 and further away. A health probe against NetBox itself still returns 200.
 
-So before moving an instance to beta2, upgrade **every** installed
-Proxbox-family plugin to a release carrying compatibility contract v3, and
+So before moving an instance to NetBox 4.7 GA, upgrade **every** installed
+Proxbox-family plugin to a release carrying compatibility contract v5, and
 afterwards verify each one is actually registered rather than trusting that
 NetBox started:
 
@@ -98,18 +97,18 @@ fail closed is tracked separately.
 
 Installations that do not use branching are unaffected.
 
-**Beta version strings.** NetBox's canonical `release.yaml` at beta2 reads
-`version: "4.7.0"` with `designation: "beta2"`, while the stock plugin gate
-receives only bare `RELEASE.version`. The numeric ceiling is therefore `4.7.0`;
-the separate metadata guard distinguishes beta2 from GA and other prereleases.
+**Pre-release version strings.** NetBox's stock loader passes the numeric
+`RELEASE.version` to `PluginConfig.validate()`. The shared compatibility module
+keeps the stable GA range in one place and emits an advisory for pre-release
+designations without making them production support.
 
-**Current pre-release evidence.** A required source-checkout job runs PDM and
-its required Proxbox dependency on exact NetBox `v4.7.0-beta2` commit
-`aa1d49d0f5021a28e6efc2d0364b84c5bcec7137`. The stable Docker matrix now
+**Current GA evidence.** A required source-checkout job runs PDM and
+its required Proxbox dependency on exact NetBox `v4.7.0` commit
+`5f06007e4c9bacc93ce17c1e645fc1143d60df3d`. The stable Docker matrix now
 extends through v4.6.6 and remains the backward-compatibility evidence.
 
 | netbox-pdm | NetBox | Python | netbox-proxbox peer plugin | proxbox-api | PDM client |
 |---|---|---|---|---|---|
-| v0.0.2 branch | v4.5.8-v4.6.6 plus held v4.7.0-beta2 | ≥3.12 | >=0.0.18,<0.1.0 | Required | proxmox-sdk>=0.0.12 |
+| v0.0.2 branch | v4.5.8-v4.6.6 plus held v4.7.0 | ≥3.12 | >=0.0.18,<0.1.0 | Required | proxmox-sdk>=0.0.12 |
 | v0.0.1.post1 | 4.5.8 – 4.6.x | ≥3.12 | >=0.0.18,<0.1.0 | Required | ≥2.33.0 |
 | v0.0.1 | 4.5.x – 4.6.x | ≥3.12 | ≥0.0.16.post5 | Required | ≥2.33.0 |
