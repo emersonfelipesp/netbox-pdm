@@ -29,7 +29,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from packaging.version import InvalidVersion, parse as parse_version
+from packaging.version import InvalidVersion
+from packaging.version import parse as parse_version
 
 # ---------------------------------------------------------------------------
 # Facts transcribed once from upstream NetBox, deliberately NOT derived from
@@ -51,9 +52,7 @@ NETBOX_470_BETA1_DISPLAY_VERSION = "4.7.0-beta1"
 def _load_compat_module() -> Any:
     """Load ``netbox_pdm/compat.py`` without importing the plugin package."""
     module_path = Path(__file__).resolve().parents[1] / "netbox_pdm" / "compat.py"
-    spec = importlib.util.spec_from_file_location(
-        "netbox_compat_under_test", module_path
-    )
+    spec = importlib.util.spec_from_file_location("netbox_compat_under_test", module_path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
@@ -86,17 +85,13 @@ class _FakeRelease:
 
 
 class _FakeAppConfig:
-    def __init__(
-        self, label: str = "netbox_pdm", verbose_name: str = "Proxbox"
-    ) -> None:
+    def __init__(self, label: str = "netbox_pdm", verbose_name: str = "Proxbox") -> None:
         self.label = label
         self.name = label
         self.verbose_name = verbose_name
 
 
-def _install_fake_django(
-    monkeypatch: pytest.MonkeyPatch, settings_obj: Any
-) -> list[Any]:
+def _install_fake_django(monkeypatch: pytest.MonkeyPatch, settings_obj: Any) -> list[Any]:
     """Install minimal ``django.conf`` / ``django.core.checks`` modules.
 
     Returns the list registered system-check callables are appended to, so a
@@ -116,9 +111,7 @@ def _install_fake_django(
     checks_mod = types.ModuleType("django.core.checks")
 
     class _CheckMessage:
-        def __init__(
-            self, msg: str, hint: str | None = None, id: str | None = None
-        ) -> None:
+        def __init__(self, msg: str, hint: str | None = None, id: str | None = None) -> None:
             self.msg = msg
             self.hint = hint
             self.id = id
@@ -169,9 +162,7 @@ def test_compat_imports_no_django_at_module_scope() -> None:
     Django is configured. The load above already proves it: it succeeded with
     no Django stubs installed.
     """
-    source = (
-        Path(__file__).resolve().parents[1] / "netbox_pdm" / "compat.py"
-    ).read_text()
+    source = (Path(__file__).resolve().parents[1] / "netbox_pdm" / "compat.py").read_text()
     module_scope_lines = [
         line
         for line in source.splitlines()
@@ -210,9 +201,7 @@ def test_compat_imports_no_django_at_module_scope() -> None:
         ("5.0.0", "unsupported-new"),
     ],
 )
-def test_netbox_support_level_classifies_every_band(
-    netbox_version: str, expected: str
-) -> None:
+def test_netbox_support_level_classifies_every_band(netbox_version: str, expected: str) -> None:
     assert netbox_support_level(netbox_version).value == expected
 
 
@@ -254,9 +243,7 @@ def test_the_previous_ceiling_would_have_rejected_470_beta1() -> None:
 
 def test_comparison_and_display_strings_preserve_ga_and_prerelease_identity() -> None:
     """The bare GA loader value and prerelease display value have distinct bands."""
-    assert netbox_support_level(NETBOX_470_BETA1_COMPARISON_VERSION) is (
-        NetBoxSupportLevel.STABLE
-    )
+    assert netbox_support_level(NETBOX_470_BETA1_COMPARISON_VERSION) is (NetBoxSupportLevel.STABLE)
     assert netbox_support_level(NETBOX_470_BETA1_DISPLAY_VERSION) is (
         NetBoxSupportLevel.EXPERIMENTAL
     )
@@ -280,9 +267,7 @@ def test_detect_netbox_version_splits_comparison_from_display(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(
-            NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION
-        ),
+        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
         VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
     )
     _install_fake_django(monkeypatch, settings)
@@ -322,17 +307,13 @@ def test_experimental_version_emits_exactly_one_warning(
 ) -> None:
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(
-            NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION
-        ),
+        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
         VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
     )
     registered = _install_fake_django(monkeypatch, settings)
 
     with caplog.at_level(logging.WARNING):
-        register_netbox_compatibility_check(
-            _FakeAppConfig(), logging.getLogger("test.compat")
-        )
+        register_netbox_compatibility_check(_FakeAppConfig(), logging.getLogger("test.compat"))
 
     results = _run_registered_check(registered)
     assert len(results) == 1
@@ -344,10 +325,7 @@ def test_experimental_version_emits_exactly_one_warning(
     assert SILENCE_SETTING_NAME in (results[0].hint or "")
 
     # And the same notice reaches operators who never run `manage.py check`.
-    assert any(
-        NETBOX_470_BETA1_DISPLAY_VERSION in record.getMessage()
-        for record in caplog.records
-    )
+    assert any(NETBOX_470_BETA1_DISPLAY_VERSION in record.getMessage() for record in caplog.records)
 
 
 @pytest.mark.parametrize("stable_version", ["4.5.8", "4.6.0", "4.6.4", "4.6.99"])
@@ -364,9 +342,7 @@ def test_stable_versions_emit_no_warning_at_all(
     registered = _install_fake_django(monkeypatch, settings)
 
     with caplog.at_level(logging.WARNING):
-        register_netbox_compatibility_check(
-            _FakeAppConfig(), logging.getLogger("test.compat")
-        )
+        register_netbox_compatibility_check(_FakeAppConfig(), logging.getLogger("test.compat"))
 
     assert _run_registered_check(registered) == []
     assert caplog.records == []
@@ -380,9 +356,7 @@ def test_undeterminable_version_reports_w002_instead_of_passing_silently(
     settings = types.SimpleNamespace(RELEASE=None, VERSION=None)
     registered = _install_fake_django(monkeypatch, settings)
 
-    register_netbox_compatibility_check(
-        _FakeAppConfig(), logging.getLogger("test.compat")
-    )
+    register_netbox_compatibility_check(_FakeAppConfig(), logging.getLogger("test.compat"))
 
     results = _run_registered_check(registered)
     assert len(results) == 1
@@ -393,19 +367,13 @@ def test_registration_is_idempotent(monkeypatch: pytest.MonkeyPatch) -> None:
     """A second ready() must not double the operator-facing warning."""
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(
-            NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION
-        ),
+        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
         VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
     )
     registered = _install_fake_django(monkeypatch, settings)
 
-    register_netbox_compatibility_check(
-        _FakeAppConfig(), logging.getLogger("test.compat")
-    )
-    register_netbox_compatibility_check(
-        _FakeAppConfig(), logging.getLogger("test.compat")
-    )
+    register_netbox_compatibility_check(_FakeAppConfig(), logging.getLogger("test.compat"))
+    register_netbox_compatibility_check(_FakeAppConfig(), logging.getLogger("test.compat"))
 
     assert len(registered) == 1
 
@@ -498,16 +466,12 @@ def test_prerelease_hint_does_not_read_as_production_clearance(
 ) -> None:
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(
-            NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION
-        ),
+        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
         VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
     )
     registered = _install_fake_django(monkeypatch, settings)
 
-    register_netbox_compatibility_check(
-        _FakeAppConfig(), logging.getLogger("test.compat")
-    )
+    register_netbox_compatibility_check(_FakeAppConfig(), logging.getLogger("test.compat"))
 
     hint = _run_registered_check(registered)[0].hint or ""
     assert SILENCE_SETTING_NAME in hint
@@ -533,18 +497,14 @@ def test_silencing_the_check_also_silences_the_startup_log(
     """
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(
-            NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION
-        ),
+        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
         VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
         SILENCED_SYSTEM_CHECKS=["netbox_pdm.W001"],
     )
     _install_fake_django(monkeypatch, settings)
 
     with caplog.at_level(logging.WARNING):
-        register_netbox_compatibility_check(
-            _FakeAppConfig(), logging.getLogger("test.compat")
-        )
+        register_netbox_compatibility_check(_FakeAppConfig(), logging.getLogger("test.compat"))
 
     assert caplog.records == []
 
@@ -555,18 +515,14 @@ def test_silencing_a_different_check_does_not_silence_ours(
     """Guard the guard: the suppression must be keyed on our own id."""
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(
-            NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION
-        ),
+        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
         VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
         SILENCED_SYSTEM_CHECKS=["some_other_plugin.W001", "netbox_pdm.W002"],
     )
     _install_fake_django(monkeypatch, settings)
 
     with caplog.at_level(logging.WARNING):
-        register_netbox_compatibility_check(
-            _FakeAppConfig(), logging.getLogger("test.compat")
-        )
+        register_netbox_compatibility_check(_FakeAppConfig(), logging.getLogger("test.compat"))
 
     assert len(caplog.records) == 1
 
@@ -577,17 +533,13 @@ def test_a_missing_silenced_setting_still_shows_the_notice(
     """Suppression fails open — an unreadable setting must not hide the notice."""
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(
-            NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION
-        ),
+        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
         VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
     )  # no SILENCED_SYSTEM_CHECKS attribute at all
     _install_fake_django(monkeypatch, settings)
 
     with caplog.at_level(logging.WARNING):
-        register_netbox_compatibility_check(
-            _FakeAppConfig(), logging.getLogger("test.compat")
-        )
+        register_netbox_compatibility_check(_FakeAppConfig(), logging.getLogger("test.compat"))
 
     assert len(caplog.records) == 1
 
@@ -611,18 +563,14 @@ def test_plugins_config_silences_both_surfaces(
     """
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(
-            NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION
-        ),
+        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
         VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
         PLUGINS_CONFIG={"netbox_pdm": {SILENCE_SETTING_NAME: True}},
     )
     registered = _install_fake_django(monkeypatch, settings)
 
     with caplog.at_level(logging.WARNING):
-        register_netbox_compatibility_check(
-            _FakeAppConfig(), logging.getLogger("test.compat")
-        )
+        register_netbox_compatibility_check(_FakeAppConfig(), logging.getLogger("test.compat"))
 
     assert caplog.records == [], "the ready() log line was not silenced"
     assert _run_registered_check(registered) == [], "the system check was not silenced"
@@ -634,18 +582,14 @@ def test_plugins_config_opt_out_is_keyed_to_this_plugin(
     """Another plugin's opt-out must not silence ours."""
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(
-            NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION
-        ),
+        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
         VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
         PLUGINS_CONFIG={"some_other_plugin": {SILENCE_SETTING_NAME: True}},
     )
     registered = _install_fake_django(monkeypatch, settings)
 
     with caplog.at_level(logging.WARNING):
-        register_netbox_compatibility_check(
-            _FakeAppConfig(), logging.getLogger("test.compat")
-        )
+        register_netbox_compatibility_check(_FakeAppConfig(), logging.getLogger("test.compat"))
 
     assert len(caplog.records) == 1
     assert len(_run_registered_check(registered)) == 1
@@ -658,18 +602,14 @@ def test_a_falsy_opt_out_still_shows_the_notice(
     """Suppression requires an affirmative value; anything else fails open."""
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(
-            NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION
-        ),
+        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
         VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
         PLUGINS_CONFIG={"netbox_pdm": {SILENCE_SETTING_NAME: falsy}},
     )
     registered = _install_fake_django(monkeypatch, settings)
 
     with caplog.at_level(logging.WARNING):
-        register_netbox_compatibility_check(
-            _FakeAppConfig(), logging.getLogger("test.compat")
-        )
+        register_netbox_compatibility_check(_FakeAppConfig(), logging.getLogger("test.compat"))
 
     assert len(caplog.records) == 1
     assert len(_run_registered_check(registered)) == 1
@@ -681,18 +621,14 @@ def test_a_malformed_plugins_config_entry_fails_open(
     """A junk entry must not crash startup, and must not hide the notice."""
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(
-            NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION
-        ),
+        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
         VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
         PLUGINS_CONFIG={"netbox_pdm": "not-a-mapping"},
     )
     registered = _install_fake_django(monkeypatch, settings)
 
     with caplog.at_level(logging.WARNING):
-        register_netbox_compatibility_check(
-            _FakeAppConfig(), logging.getLogger("test.compat")
-        )
+        register_netbox_compatibility_check(_FakeAppConfig(), logging.getLogger("test.compat"))
 
     assert len(caplog.records) == 1
     assert len(_run_registered_check(registered)) == 1
@@ -721,18 +657,14 @@ def test_only_the_literal_boolean_true_silences_the_notice(
     """
     _reset_registration_guard(monkeypatch)
     settings = types.SimpleNamespace(
-        RELEASE=_FakeRelease(
-            NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION
-        ),
+        RELEASE=_FakeRelease(NETBOX_470_BETA1_COMPARISON_VERSION, NETBOX_470_BETA1_DISPLAY_VERSION),
         VERSION=NETBOX_470_BETA1_DISPLAY_VERSION,
         PLUGINS_CONFIG={"netbox_pdm": {SILENCE_SETTING_NAME: truthy_but_not_true}},
     )
     registered = _install_fake_django(monkeypatch, settings)
 
     with caplog.at_level(logging.WARNING):
-        register_netbox_compatibility_check(
-            _FakeAppConfig(), logging.getLogger("test.compat")
-        )
+        register_netbox_compatibility_check(_FakeAppConfig(), logging.getLogger("test.compat"))
 
     assert len(caplog.records) == 1, f"{truthy_but_not_true!r} must not silence"
     assert len(_run_registered_check(registered)) == 1
@@ -757,9 +689,7 @@ def test_the_w001_opt_out_does_not_silence_w002(
     registered = _install_fake_django(monkeypatch, settings)
 
     with caplog.at_level(logging.WARNING):
-        register_netbox_compatibility_check(
-            _FakeAppConfig(), logging.getLogger("test.compat")
-        )
+        register_netbox_compatibility_check(_FakeAppConfig(), logging.getLogger("test.compat"))
 
     results = _run_registered_check(registered)
     assert len(results) == 1 and results[0].id == "netbox_pdm.W002"
@@ -779,9 +709,7 @@ def test_w002_is_still_silenceable_by_naming_it_explicitly(
     registered = _install_fake_django(monkeypatch, settings)
 
     with caplog.at_level(logging.WARNING):
-        register_netbox_compatibility_check(
-            _FakeAppConfig(), logging.getLogger("test.compat")
-        )
+        register_netbox_compatibility_check(_FakeAppConfig(), logging.getLogger("test.compat"))
 
     assert _run_registered_check(registered) == []
     assert caplog.records == []
