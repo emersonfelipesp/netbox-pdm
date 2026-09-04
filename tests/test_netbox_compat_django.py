@@ -4,10 +4,18 @@ from __future__ import annotations
 
 import os
 
+import pytest
+
 os.environ.setdefault("NETBOX_CONFIGURATION", "tests.netbox_test_configuration")
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "netbox.settings")
 
-import django  # noqa: E402
+try:
+    import django  # noqa: E402
+except ModuleNotFoundError:
+    pytest.skip(
+        "Django/NetBox test dependencies are not installed in this environment.",
+        allow_module_level=True,
+    )
 
 django.setup()
 
