@@ -35,6 +35,6 @@ def test_ga_version_is_stable_and_declared_ceiling_covers_minor_line() -> None:
     compat = _load_compat_module()
 
     assert compat.netbox_support_level("4.7.0").value == "stable"
-    assert compat.netbox_support_level("4.7.99").value == "stable"
+    assert compat.netbox_support_level("4.7.99").value == "unsupported-new"
     assert compat.PLUGIN_MIN_VERSION == "4.5.8"
-    assert compat.PLUGIN_MAX_VERSION == "4.7.99"
+    assert compat.PLUGIN_MAX_VERSION == "4.7.0"

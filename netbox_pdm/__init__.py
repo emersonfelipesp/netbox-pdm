@@ -14,7 +14,7 @@ from .compat import (
     register_netbox_compatibility_check,
 )
 
-__version__ = "0.0.2"
+__version__ = "0.0.2.post1"
 
 
 class NetBoxPDMConfig(PluginConfig):

@@ -11,22 +11,22 @@ whole Proxbox plugin stack (`netbox-proxbox`, `netbox-ceph`, `netbox-packer`,
 
 | Tier | NetBox range | Constant | Behaviour |
 |---|---|---|---|
-| **Stable** | `4.5.8` – `4.7.99` | `STABLE_MIN_NETBOX_VERSION` / `STABLE_MAX_NETBOX_VERSION` | Admitted silently. CI exercises the established 4.5/4.6 cells and official v4.7.0 GA. |
-| **Experimental** | Pre-release builds within the declared `4.5.8`–`4.7.99` loader range | Derived by `compat.py` | Loads for evaluation and warns once via system check `netbox_pdm.W001`; it is not production support. |
+| **Stable** | `4.5.8` – `4.7.0` | `STABLE_MIN_NETBOX_VERSION` / `STABLE_MAX_NETBOX_VERSION` | Admitted silently. CI exercises the established 4.5/4.6 cells and official v4.7.0 GA. |
+| **Experimental** | Pre-release builds within the declared `4.5.8`–`4.7.0` loader range | Derived by `compat.py` | Loads for evaluation and warns once via system check `netbox_pdm.W001`; it is not production support. |
 
 `PluginConfig.min_version` and `PluginConfig.max_version` are sourced from the
-shared v5 compatibility contract, which admits the stable `4.5.8`–`4.7.99`
+shared v5 compatibility contract, which admits the stable `4.5.8`–`4.7.0`
 range and classifies pre-release designations as experimental. Local release
 metadata is advisory only and cannot widen the loader range.
 
-On a 4.7 install you will see one warning per plugin, from `manage.py check` and
-in the startup log:
+Official NetBox 4.7.0 GA emits no compatibility warning. A pre-release identity
+within the loader range emits one evaluation warning from `manage.py check` and
+the startup log:
 
 ```
 WARNINGS:
-?: (netbox_pdm.W001) NetBox PDM is running on NetBox 4.7.0, which is
-   supported on an experimental basis only. Certified support covers NetBox
-   4.5.8 through 4.7.99.
+?: (netbox_pdm.W001) NetBox PDM is running on a pre-release identity within
+   the supported loader range.
 ```
 
 It is a warning, never an error — it cannot block NetBox from starting.

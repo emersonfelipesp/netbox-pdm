@@ -40,7 +40,7 @@ def test_plugin_config_exposes_required_attrs() -> None:
     data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert cfg.version == data["project"]["version"]
     assert cfg.min_version == "4.5.8"
-    assert cfg.max_version == "4.7.99"
+    assert cfg.max_version == "4.7.0"
     assert cfg.required_plugins == ["netbox_proxbox"]
     assert cfg.author_email == "emersonfelipe.2003@gmail.com"
 
@@ -49,7 +49,7 @@ def test_pyproject_certification_metadata() -> None:
     data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     project = data["project"]
 
-    assert project["version"] == "0.0.2"
+    assert project["version"] == "0.0.2.post1"
     assert project["license"] == "Apache-2.0"
     assert project["license-files"] == ["LICENSE"]
     assert "License :: OSI Approved :: Apache Software License" not in project["classifiers"]
@@ -137,7 +137,7 @@ def test_plugin_config_bounds_come_from_the_shared_compat_module() -> None:
 
     assert config.min_version == PLUGIN_MIN_VERSION == STABLE_MIN_NETBOX_VERSION
     assert config.max_version == PLUGIN_MAX_VERSION == STABLE_MAX_NETBOX_VERSION
-    assert STABLE_MAX_NETBOX_VERSION == "4.7.99"
+    assert STABLE_MAX_NETBOX_VERSION == "4.7.0"
 
 
 def test_packaging_is_a_declared_dependency() -> None:

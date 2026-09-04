@@ -69,10 +69,10 @@ capture, and page-coverage workflows for NetBox v4.6.4. Docker install smoke
 coverage spans NetBox v4.5.8 through v4.6.6.
 
 Official NetBox `v4.7.0` GA is admitted in the stable backward-compatible
-`4.5.8`–`4.7.99` range. Pre-release identities warn once at startup and are not
+`4.5.8`–`4.7.0` range. Pre-release identities warn once at startup and are not
 production support. CI pins the exact GA source revision
-`5f06007e4c9bacc93ce17c1e645fc1143d60df3d`, while runtime verifies canonical
-release metadata. See [COMPATIBILITY.md](COMPATIBILITY.md) for the tier
+`5f06007e4c9bacc93ce17c1e645fc1143d60df3d`; runtime enforces the numeric
+compatibility band while CI provides canonical source provenance. See [COMPATIBILITY.md](COMPATIBILITY.md) for the tier
 table, how to silence the notice, and why every Proxbox-family plugin must be
 upgraded together before moving an instance to NetBox 4.7 GA.
 
