@@ -27,6 +27,7 @@ def test_plugin_is_installed_and_current_release_is_admitted() -> None:
 
     from netbox_pdm import config
 
+    assert apps.is_installed("netbox_proxbox")
     assert apps.is_installed("netbox_pdm")
     current = parse(settings.RELEASE.version)
     assert parse(config.min_version) <= current <= parse(config.max_version)
