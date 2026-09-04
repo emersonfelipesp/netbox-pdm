@@ -110,7 +110,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: emersonfelipesp/netbox-proxbox
-          ref: 8b897739f436d03fb779e13f06eec34a9e03315d
+          ref: 2ad98bd7f4f25b313ddaf57cc24c5669ed2f8ca4
           path: netbox-proxbox
           persist-credentials: false
 
