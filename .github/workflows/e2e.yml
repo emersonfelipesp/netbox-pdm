@@ -6,12 +6,6 @@ on:
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
-    inputs:
-      netbox_image:
-        description: "NetBox Docker image to test against"
-        required: false
-        type: string
-        default: "netboxcommunity/netbox:v4.6.6"
 
 permissions:
   contents: read
@@ -24,22 +18,15 @@ jobs:
       fail-fast: false
       matrix:
         netbox_image:
-          - netboxcommunity/netbox:v4.5.8
-          - netboxcommunity/netbox:v4.5.9
-          - netboxcommunity/netbox:v4.6.0
-          - netboxcommunity/netbox:v4.6.1
-          - netboxcommunity/netbox:v4.6.2
-          - netboxcommunity/netbox:v4.6.3
-          - netboxcommunity/netbox:v4.6.4
-          - netboxcommunity/netbox:v4.6.6
+          - netboxcommunity/netbox:v4.7.0-5.1.0@sha256:73a54ff279461170032b59a57a1930929965e3ba15c195af59f4b5f6d39a84a9
     env:
-      NETBOX_IMAGE: ${{ inputs.netbox_image || matrix.netbox_image }}
+      NETBOX_IMAGE: ${{ matrix.netbox_image }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
 
@@ -61,20 +48,24 @@ jobs:
               /opt/netbox/venv/bin/python -c "import netbox_pdm; print(netbox_pdm.__name__)"
             '
 
-      - name: Upload wheel
-        uses: actions/upload-artifact@v7
-        with:
-          name: netbox-pdm-wheel
-          path: dist/*.whl
-          if-no-files-found: error
 
-  netbox-beta2-compatibility:
-    name: NetBox v4.7.0-beta2 exact-source compatibility
+  netbox-ga-compatibility:
+    name: NetBox source compatibility / ${{ matrix.netbox_version }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - netbox_version: v4.5.8
+            netbox_ref: 75e1b86613792458b4d4c8d0cbbfc94df16cfaaf
+          - netbox_version: v4.6.6
+            netbox_ref: fb8c455ba61b57119a70670612dfdd05e8438b10
+          - netbox_version: v4.7.0
+            netbox_ref: 5f06007e4c9bacc93ce17c1e645fc1143d60df3d
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:16-alpine@sha256:075f7ba66bc9b3ce7d6b8b635208ff61cd7cf1a67d71ec530eec5d7ae0cbe571
         env:
           POSTGRES_USER: netbox
           POSTGRES_PASSWORD: netbox
@@ -86,7 +77,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
       redis:
-        image: redis:7-alpine
+        image: redis:7-alpine@sha256:1db42ccef14898aa29bae778452d567534b59c107129cbc1163fb552de184d3c
         ports: ["6379:6379"]
         options: >-
           --health-cmd "redis-cli ping"
@@ -95,26 +86,26 @@ jobs:
           --health-retries 10
     steps:
       - name: Checkout plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Checkout exact NetBox beta2 source
-        uses: actions/checkout@v6
+      - name: Checkout exact NetBox source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: netbox-community/netbox
-          ref: aa1d49d0f5021a28e6efc2d0364b84c5bcec7137
+          ref: ${{ matrix.netbox_ref }}
           path: netbox-source
           persist-credentials: false
 
       - name: Checkout the 4.7-capable Proxbox contract
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: emersonfelipesp/netbox-proxbox
-          ref: 24dde6a9095a84efdaa0e07a60c9728c2372e235
+          ref: 2ad98bd703f4ed06636b446ec7fc67749e4d69c9
           path: netbox-proxbox
           persist-credentials: false
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
           cache: pip
@@ -124,10 +115,11 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r netbox-source/requirements.txt
           python -m pip install -e ./netbox-proxbox
-          python -m pip install -e ".[test]"
+          python -m pip install -e ".[test]" --no-deps
+          python -m pip install "proxmox-sdk==0.0.12" "pytest==9.0.3" "pytest-django==4.12.0"
 
       - name: Assert immutable NetBox checkout
-        run: test "$(git -C netbox-source rev-parse HEAD)" = aa1d49d0f5021a28e6efc2d0364b84c5bcec7137
+        run: test "$(git -C netbox-source rev-parse HEAD)" = "${{ matrix.netbox_ref }}"
 
       - name: Migrate, check, and render registered views
         env:

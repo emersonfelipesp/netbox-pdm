@@ -9,16 +9,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-SUPPORTED_NETBOX_IMAGES = (
-    "netboxcommunity/netbox:v4.5.8",
-    "netboxcommunity/netbox:v4.5.9",
-    "netboxcommunity/netbox:v4.6.0",
-    "netboxcommunity/netbox:v4.6.1",
-    "netboxcommunity/netbox:v4.6.2",
-    "netboxcommunity/netbox:v4.6.3",
-    "netboxcommunity/netbox:v4.6.4",
-    "netboxcommunity/netbox:v4.6.6",
-)
+GA_NETBOX_IMAGE = "netboxcommunity/netbox:v4.7.0-5.1.0@sha256:73a54ff279461170032b59a57a1930929965e3ba15c195af59f4b5f6d39a84a9"
 
 
 def test_package_importable() -> None:
@@ -40,8 +31,6 @@ def test_plugin_config_exposes_required_attrs() -> None:
     assert cfg.version == data["project"]["version"]
     assert cfg.min_version == "4.5.8"
     assert cfg.max_version == "4.7.0"
-    assert cfg.approved_netbox_version == "4.7.0"
-    assert cfg.approved_netbox_designation == "beta2"
     assert cfg.required_plugins == ["netbox_proxbox"]
     assert cfg.author_email == "emersonfelipe.2003@gmail.com"
 
@@ -65,11 +54,10 @@ def test_pyproject_certification_metadata() -> None:
 def test_e2e_workflow_covers_supported_netbox_versions() -> None:
     workflow = (ROOT / ".github" / "workflows" / "e2e.yml").read_text(encoding="utf-8")
 
-    for image in SUPPORTED_NETBOX_IMAGES:
-        assert image in workflow
-    assert "netbox-beta2-compatibility:" in workflow
-    assert "aa1d49d0f5021a28e6efc2d0364b84c5bcec7137" in workflow
-    assert "24dde6a9095a84efdaa0e07a60c9728c2372e235" in workflow
+    assert GA_NETBOX_IMAGE in workflow
+    assert "netbox-ga-compatibility:" in workflow
+    assert "5f06007e4c9bacc93ce17c1e645fc1143d60df3d" in workflow
+    assert "2ad98bd703f4ed06636b446ec7fc67749e4d69c9" in workflow
     assert "tests/test_netbox_compat_django.py" in workflow
 
 
@@ -86,11 +74,10 @@ def test_docs_name_supported_netbox_versions() -> None:
         ]
     )
 
-    for image in SUPPORTED_NETBOX_IMAGES:
-        assert image.rsplit(":", 1)[1] in docs
-
-    assert "v4.7.0-beta2" in docs
-    assert "aa1d49d0f5021a28e6efc2d0364b84c5bcec7137" in docs
+    assert "v4.5.8" in docs
+    assert "v4.6.6" in docs
+    assert "v4.7.0" in docs
+    assert "5f06007e4c9bacc93ce17c1e645fc1143d60df3d" in docs
 
 
 def test_pdm_sync_job_persists_result_data() -> None:
@@ -124,14 +111,12 @@ def test_pdm_sync_job_uses_branch_lifecycle_for_orm_reconciliation() -> None:
 def test_plugin_config_bounds_come_from_the_shared_compat_module() -> None:
     """The declared bounds must be sourced from compat.py, not re-typed literals.
 
-    Two copies of the supported range would drift silently. The stable ceiling
-    (4.6.99) and held numeric ceiling (4.7.0) are deliberately different; the
-    release-identity guard narrows that bare value to canonical beta2.
+    Two copies of the supported range would drift silently. The shared policy
+    retains the 4.5.8 backward-compatible floor and admits official 4.7.0 GA.
     """
     pytest.importorskip("netbox")
     from netbox_pdm import config
     from netbox_pdm.compat import (
-        EXPERIMENTAL_MAX_NETBOX_VERSION,
         PLUGIN_MAX_VERSION,
         PLUGIN_MIN_VERSION,
         STABLE_MAX_NETBOX_VERSION,
@@ -139,9 +124,8 @@ def test_plugin_config_bounds_come_from_the_shared_compat_module() -> None:
     )
 
     assert config.min_version == PLUGIN_MIN_VERSION == STABLE_MIN_NETBOX_VERSION
-    assert config.max_version == PLUGIN_MAX_VERSION == EXPERIMENTAL_MAX_NETBOX_VERSION
-    assert STABLE_MAX_NETBOX_VERSION == "4.6.99"
-    assert EXPERIMENTAL_MAX_NETBOX_VERSION == "4.7.0"
+    assert config.max_version == PLUGIN_MAX_VERSION == STABLE_MAX_NETBOX_VERSION
+    assert STABLE_MAX_NETBOX_VERSION == "4.7.0"
 
 
 def test_packaging_is_a_declared_dependency() -> None:

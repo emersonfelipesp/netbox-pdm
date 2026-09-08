@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  NETBOX_IMAGE: netboxcommunity/netbox:v4.6.4
+  NETBOX_IMAGE: netboxcommunity/netbox:v4.6.4@sha256:094e0997eb8916d1e47dba8ac53e32427ee9639cd838512747b771421dff3c9b
   SECRET_KEY: netbox-pdm-e2e-secret-key-netbox-pdm-e2e-secret-key-netbox-pdm-e2e-secret-key
 
 concurrency:
@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   page-coverage:
-    name: Page Coverage / netboxcommunity/netbox:v4.6.4 / local
+    name: Page Coverage / netboxcommunity/netbox:v4.6.4@sha256:094e0997eb8916d1e47dba8ac53e32427ee9639cd838512747b771421dff3c9b / local
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -51,10 +51,10 @@ jobs:
             --health-interval=2s \
             --health-timeout=2s \
             --health-retries=30 \
-            postgres:16-alpine
+            postgres:16-alpine@sha256:075f7ba66bc9b3ce7d6b8b635208ff61cd7cf1a67d71ec530eec5d7ae0cbe571
 
           docker run -d --name netbox-e2e-redis --network netbox-pdm-e2e \
-            redis:7-alpine
+            redis:7-alpine@sha256:1db42ccef14898aa29bae778452d567534b59c107129cbc1163fb552de184d3c
 
           for i in $(seq 1 60); do
             health="$(docker inspect --format '{{.State.Health.Status}}' netbox-e2e-postgres 2>/dev/null || echo unknown)"

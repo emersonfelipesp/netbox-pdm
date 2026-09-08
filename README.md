@@ -65,16 +65,16 @@ Use GitHub Issues for bugs and feature requests:
 Certification evidence is tracked in [CERTIFICATION.md](./CERTIFICATION.md).
 The repository includes Apache-2.0 licensing, PyPI metadata, compatibility
 metadata, GitHub Actions CI, release validation, docs publishing, screenshot
-capture, and page-coverage workflows for NetBox v4.6.4. Docker install smoke
-coverage spans NetBox v4.5.8 through v4.6.6.
+capture, and page-coverage workflows for NetBox v4.6.4. Digest-pinned Docker
+install smoke covers official NetBox v4.7.0 GA; exact-source integration tests
+cover the backward-compatible v4.5.8 through v4.6.6 range.
 
-Canonical NetBox `v4.7.0-beta2` metadata is admitted on a **release-held**
-basis and warns once at startup; final 4.7.0 and every other 4.7 identity fail
+Canonical NetBox `v4.7.0 GA` metadata is admitted on a **GA**
+basis and runs without a compatibility warning; 4.7.1 and later fail
 closed. CI pins exact source revision
-`aa1d49d0f5021a28e6efc2d0364b84c5bcec7137`, while runtime verifies canonical
-release metadata. See [COMPATIBILITY.md](COMPATIBILITY.md) for the tier
-table, how to silence the notice, and why every Proxbox-family plugin must be
-upgraded together before moving an instance to beta2.
+`5f06007e4c9bacc93ce17c1e645fc1143d60df3d`; the shared numeric compatibility
+bounds preserve the historical upgrade path. See [COMPATIBILITY.md](COMPATIBILITY.md)
+for the tier table and the Proxbox-family upgrade procedure.
 
 ## License
 
