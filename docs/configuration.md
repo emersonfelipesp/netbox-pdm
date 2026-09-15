@@ -30,10 +30,14 @@ database.
 - `fail` — leave the branch open for manual review if there are conflicts.
 - `acknowledge` — merge despite conflicts (last-write-wins).
 
-!!! note
-    `netbox-branching` must be installed and enabled in your NetBox instance
-    to use branch-isolated sync.  If it is not installed, `branching_enabled`
-    has no effect.
+!!! warning "Branching fails closed"
+    `netbox-branching` must be installed, loaded, and compatible with your
+    NetBox version before you enable branch-isolated sync. When
+    `branching_enabled` is `True`, a sync refuses to run if the settings row
+    cannot be read or the branching runtime cannot be confirmed. The failure is
+    recorded in the job error, and the job does not fall back to writing
+    `PDMRemote` rows on the main schema. Set `branching_enabled=False` explicitly
+    if direct writes to main are intended.
 
 ## PDMEndpoint configuration
 

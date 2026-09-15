@@ -53,7 +53,11 @@ def _import_jobs_module(monkeypatch: pytest.MonkeyPatch):
     branch_lifecycle.activate_branch_context = activate_branch_context
     branch_lifecycle.branching_enabled_settings = lambda: None
     branch_lifecycle.create_and_provision_branch = lambda **_kwargs: None
-    branch_lifecycle.merge_branch = lambda **_kwargs: (True, "merged")
+    branch_lifecycle.merge_branch = lambda **_kwargs: SimpleNamespace(
+        merged=True,
+        message="merged",
+        disposition=None,
+    )
 
     monkeypatch.setitem(sys.modules, "netbox.constants", constants)
     monkeypatch.setitem(sys.modules, "netbox.jobs", netbox_jobs)
@@ -198,6 +202,123 @@ def test_sync_remotes_creates_updates_and_prunes_stale_rows(monkeypatch):
     assert manager.rows[(endpoint, "beta")].type == "pve"
     assert manager.rows[(endpoint, "beta")].fingerprint == "remote-fp"
     assert manager.rows[(endpoint, "beta")].last_seen_at == "now-marker"
+
+
+def test_sync_job_branching_decision_failure_precedes_model_writes(monkeypatch):
+    jobs = _import_jobs_module(monkeypatch)
+    refusal = "PDM sync refused: configured branch isolation is unavailable."
+
+    class DecisionUnavailable(RuntimeError):
+        pass
+
+    class EndpointManager:
+        def get(self, *, pk):
+            assert pk == 41
+            return SimpleNamespace(pk=pk, name="pdm-a", enabled=True)
+
+    class PDMEndpoint:
+        objects = EndpointManager()
+        DoesNotExist = LookupError
+
+    class NoWriteManager:
+        update_or_create_calls = 0
+
+        def update_or_create(self, **kwargs):
+            self.update_or_create_calls += 1
+            raise AssertionError(f"unexpected model write: {kwargs}")
+
+    no_write_manager = NoWriteManager()
+
+    class PDMRemote:
+        objects = no_write_manager
+
+    proxbox_models = types.ModuleType("netbox_proxbox.models")
+    setattr(proxbox_models, "PDMEndpoint", PDMEndpoint)
+    setattr(proxbox_models, "PDMRemote", PDMRemote)
+    monkeypatch.setitem(sys.modules, "netbox_proxbox.models", proxbox_models)
+
+    def unavailable_decision():
+        raise DecisionUnavailable(refusal)
+
+    monkeypatch.setattr(jobs, "branching_enabled_settings", unavailable_decision)
+    monkeypatch.setattr(
+        jobs,
+        "_fetch_pdm_remotes",
+        lambda *_args: pytest.fail("PDM fetch ran before the branching guard"),
+    )
+
+    runner = object.__new__(jobs.PDMSyncJob)
+    runner.job = SimpleNamespace(pk=9, user=None, data={})
+    runner.logger = logging.getLogger(__name__)
+
+    with pytest.raises(DecisionUnavailable) as raised:
+        runner.run(endpoint_pk=41)
+
+    assert str(raised.value) == refusal
+    assert no_write_manager.update_or_create_calls == 0
+
+
+@pytest.mark.parametrize(
+    ("merge_result", "raises"),
+    [
+        pytest.param(
+            SimpleNamespace(merged=True, message="Branch pdm-1 merged.", disposition=None),
+            False,
+            id="merged",
+        ),
+        pytest.param(
+            SimpleNamespace(
+                merged=False,
+                message="Branch pdm-1 has unresolved conflicts.",
+                disposition=None,
+            ),
+            True,
+            id="conflict",
+        ),
+        pytest.param(
+            SimpleNamespace(
+                merged=True,
+                message="Branch pdm-1 had no changes; branch left open.",
+                disposition="no_changes_left_open",
+            ),
+            False,
+            id="no-change",
+        ),
+    ],
+)
+def test_sync_job_persists_typed_merge_result(monkeypatch, merge_result, raises):
+    jobs = _import_jobs_module(monkeypatch)
+    monkeypatch.setattr(jobs, "merge_branch", lambda **_kwargs: merge_result)
+
+    save_calls = []
+    job = SimpleNamespace(
+        user=None,
+        data={"branch": {"name": "pdm-1"}},
+        save=lambda **kwargs: save_calls.append(kwargs),
+    )
+    runner = object.__new__(jobs.PDMSyncJob)
+    runner.job = job
+    runner.logger = logging.getLogger(__name__)
+
+    if raises:
+        with pytest.raises(RuntimeError, match=merge_result.message):
+            runner._merge_branch(
+                branch=SimpleNamespace(name="pdm-1"),
+                branch_config={"on_conflict": "fail"},
+            )
+    else:
+        runner._merge_branch(
+            branch=SimpleNamespace(name="pdm-1"),
+            branch_config={"on_conflict": "fail"},
+        )
+
+    assert job.data["branch"] == {
+        "name": "pdm-1",
+        "merge_message": merge_result.message,
+        "merged": merge_result.merged,
+        "disposition": merge_result.disposition,
+    }
+    assert save_calls == [{"update_fields": ["data"]}]
 
 
 def test_make_pdm_client_resolves_host_token_and_logs_disabled_tls(

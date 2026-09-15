@@ -120,6 +120,12 @@ from PDM before branch creation, then activates the branch context only while
 reconciling `PDMRemote` rows so the direct ORM writes are isolated correctly.
 If reconciliation fails, the branch is left open for operator inspection.
 
+The branching decision is resolved before PDM data is fetched. If the settings
+row cannot be read or an enabled branching runtime cannot be confirmed, the job
+raises `BranchingUnavailableError` and performs no `PDMRemote` write. Only an
+explicit `branching_enabled=False` decision permits direct reconciliation on
+the main schema.
+
 ## Dispatch invariant
 
 Always dispatch the job with `endpoint_pk` in `kwargs`, **never** with

@@ -9,9 +9,11 @@ remotes, views, and SDN-adjacent state — into NetBox through the
 reuses `netbox-proxbox` FastAPI endpoint resolution and job conventions when
 that plugin is installed, and falls back to its own `proxbox_api_url` /
 `proxbox_api_key` plugin settings otherwise.
-`netbox-proxbox` remains a required NetBox peer plugin in `PLUGINS`, but is not
-installed as a Python wheel dependency so the Proxbox stack can resolve one
-shared Pydantic line with `proxmox-sdk`.
+`netbox-proxbox` remains a required NetBox peer plugin in `PLUGINS` and a
+Python package dependency. Fail-closed branch isolation is guaranteed across
+the supported `netbox-proxbox` range. Version 0.0.27 and later supply the typed
+branching decision consumed by this plugin; older supported versions use the
+fail-closed runtime-probe fallback.
 
 ## Status
 
@@ -26,6 +28,19 @@ Security and reconciliation behavior:
   the field blank preserves the stored secret.
 - Sync creates, updates, and prunes `PDMRemote` rows so remotes removed from
   PDM do not remain as stale NetBox inventory.
+
+## Branch isolation
+
+Branch isolation is disabled by default. When `PdmPluginSettings.branching_enabled`
+is `False`, sync writes directly to the main schema. When it is `True`, sync
+requires a loaded, working `netbox-branching` runtime and performs reconciliation
+inside a provisioned branch.
+
+The job fails closed if it cannot read the settings row, import the Proxbox
+branching helpers, or confirm that the branching runtime is available. It raises
+`BranchingUnavailableError` before fetching PDM data or writing `PDMRemote` rows;
+the refusal is recorded as the job error instead of silently writing to main.
+This guarantee applies to every supported `netbox-proxbox` version.
 
 ## Compatibility
 

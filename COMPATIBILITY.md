@@ -17,10 +17,19 @@ The shared compatibility module is vendored byte-identically across
 
 ## Verification matrix
 
-| Plugin release | NetBox releases | Python | proxbox-api |
-|---|---|---|---|
-| v0.0.2 branch | v4.5.8–v4.6.6 and official v4.7.0 GA | ≥3.12 | Required |
-| v0.0.1 | 4.5.x–4.6.x | ≥3.12 | Required |
+| Plugin release | NetBox releases | netbox-proxbox | Python | proxbox-api |
+|---|---|---|---|---|
+| v0.0.2 branch | v4.5.8–v4.6.6 and official v4.7.0 GA | ≥0.0.25.post2,<0.1.0 | ≥3.12 | Required |
+| v0.0.1 | 4.5.x–4.6.x | ≥0.0.18,<0.1.0 | ≥3.12 | Required |
+
+Fail-closed branch isolation is guaranteed with every supported
+`netbox-proxbox` version. Starting with 0.0.27, `netbox-pdm` consumes the typed
+`BranchingDecision` and `BranchingUnavailableError` contract. With older
+supported versions, where `resolve_branching_decision()` is absent, the PDM
+wrapper calls `is_branching_available()` and refuses to sync when it cannot
+confirm that the branching runtime is usable. The merge wrapper also normalizes
+the legacy two-item result and the 0.0.27 three-item result so staged upgrades
+remain safe.
 
 The legacy 4.5/4.6 cells remain in CI for backward compatibility. The GA cell
 uses the exact NetBox source revision

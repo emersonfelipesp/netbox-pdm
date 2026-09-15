@@ -36,6 +36,10 @@ python manage.py collectstatic
 - `PDMSyncJob` reconciles PDM remotes by creating, updating, and pruning stale
   `PDMRemote` rows scoped to the endpoint. Job results should include created,
   updated, deleted, and total counts.
+- Branch isolation is fail-closed. `branching_enabled_settings()` returns
+  `None` only when `PdmPluginSettings.branching_enabled` is explicitly false;
+  unreadable settings or an unavailable configured runtime must raise
+  `BranchingUnavailableError` before `PDMSyncJob` writes any `PDMRemote` row.
 
 ## Architecture
 

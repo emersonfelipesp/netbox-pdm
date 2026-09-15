@@ -7,6 +7,8 @@ import tomllib
 from pathlib import Path
 
 import pytest
+from packaging.requirements import Requirement
+from packaging.version import Version
 
 ROOT = Path(__file__).resolve().parents[1]
 GA_NETBOX_IMAGE = "netboxcommunity/netbox:v4.7.0-5.1.0@sha256:73a54ff279461170032b59a57a1930929965e3ba15c195af59f4b5f6d39a84a9"
@@ -44,11 +46,22 @@ def test_pyproject_certification_metadata() -> None:
     assert project["license-files"] == ["LICENSE"]
     assert "License :: OSI Approved :: Apache Software License" not in project["classifiers"]
     assert "proxmox-sdk>=0.0.12" in project["dependencies"]
-    assert not any(
-        dependency.startswith("netbox-proxbox") for dependency in project["dependencies"]
-    )
+    assert "netbox-proxbox>=0.0.25.post2,<0.1.0" in project["dependencies"]
     assert project["urls"]["Documentation"] == "https://emersonfelipesp.github.io/netbox-pdm/"
     assert (ROOT / "LICENSE").is_file()
+
+
+def test_netbox_proxbox_floor_is_not_ahead_of_latest_published_release() -> None:
+    data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    requirement = next(
+        Requirement(value)
+        for value in data["project"]["dependencies"]
+        if Requirement(value).name == "netbox-proxbox"
+    )
+
+    # Keep this hermetic version marker aligned with the latest published wheel.
+    latest_published = Version("0.0.26.post7")
+    assert requirement.specifier.contains(latest_published)
 
 
 def test_e2e_workflow_covers_supported_netbox_versions() -> None:

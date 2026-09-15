@@ -245,7 +245,10 @@ def test_the_previous_ceiling_would_have_rejected_470_ga() -> None:
 def test_ga_and_prerelease_display_strings_have_distinct_bands() -> None:
     """The bare loader value is GA while the beta display remains experimental."""
     assert netbox_support_level(NETBOX_470_GA_VERSION) is NetBoxSupportLevel.STABLE
-    assert netbox_support_level(NETBOX_470_PRERELEASE_DISPLAY_VERSION) is NetBoxSupportLevel.EXPERIMENTAL
+    assert (
+        netbox_support_level(NETBOX_470_PRERELEASE_DISPLAY_VERSION)
+        is NetBoxSupportLevel.EXPERIMENTAL
+    )
 
 
 def test_declared_bounds_have_the_expected_literal_values() -> None:
@@ -336,7 +339,9 @@ def test_experimental_version_emits_exactly_one_warning(
     assert SILENCE_SETTING_NAME in (results[0].hint or "")
 
     # And the same notice reaches operators who never run `manage.py check`.
-    assert any(NETBOX_470_PRERELEASE_DISPLAY_VERSION in record.getMessage() for record in caplog.records)
+    assert any(
+        NETBOX_470_PRERELEASE_DISPLAY_VERSION in record.getMessage() for record in caplog.records
+    )
 
 
 @pytest.mark.parametrize("stable_version", ["4.5.8", "4.6.0", "4.6.4", "4.6.99"])

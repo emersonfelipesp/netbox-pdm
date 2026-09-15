@@ -36,6 +36,7 @@ dependencies = [
     # imports it directly, so it belongs in the metadata rather than being
     # inherited by luck.
     "packaging>=23.0",
+    "netbox-proxbox>=0.0.25.post2,<0.1.0",
     "PyYAML>=6.0",
     "proxmox-sdk>=0.0.12",
 ]

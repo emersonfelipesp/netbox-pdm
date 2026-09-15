@@ -231,22 +231,23 @@ class PDMSyncJob(JobRunner):
             raise
 
     def _merge_branch(self, *, branch: object, branch_config: dict[str, str]) -> None:
-        merged, message = merge_branch(
+        merge_result = merge_branch(
             branch=branch,
             user=getattr(self.job, "user", None),
             on_conflict=branch_config["on_conflict"],
         )
         branch_data = (self.job.data or {}).get("branch", {})
-        branch_data["merge_message"] = message
-        branch_data["merged"] = merged
+        branch_data["merge_message"] = merge_result.message
+        branch_data["merged"] = merge_result.merged
+        branch_data["disposition"] = merge_result.disposition
         data = self.job.data or {}
         data["branch"] = branch_data
         self.job.data = data
         self.job.save(update_fields=["data"])
-        if not merged:
-            self.logger.error(message)
-            raise RuntimeError(message)
-        self.logger.info(message)
+        if not merge_result.merged:
+            self.logger.error(merge_result.message)
+            raise RuntimeError(merge_result.message)
+        self.logger.info(merge_result.message)
 
     def run(self, *args: object, **kwargs: object) -> None:
         from netbox_proxbox.models import PDMEndpoint
@@ -277,10 +278,10 @@ class PDMSyncJob(JobRunner):
             _endpoint_label(endpoint),
         )
 
+        branch_config = branching_enabled_settings()
         remotes = _fetch_pdm_remotes(endpoint, self.logger)
 
         branch = None
-        branch_config = branching_enabled_settings()
         if branch_config is not None:
             branch = self._create_branch(
                 endpoint=endpoint,
