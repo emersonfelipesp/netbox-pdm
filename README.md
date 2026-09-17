@@ -1,14 +1,14 @@
 # netbox-pdm
 
-NetBox plugin that reflects **Proxmox Datacenter Manager (PDM)** inventory —
-remotes, views, and SDN-adjacent state — into NetBox through the
-[`proxbox-api`](https://github.com/emersonfelipesp/proxbox-api) backend.
+NetBox plugin that reflects **Proxmox Datacenter Manager (PDM)** remote
+inventory into NetBox. The current sync path connects directly to PDM through
+`proxmox-sdk`'s `SyncPDMClient`; it does not use `proxbox-api`.
 
 `netbox-pdm` is a sibling plugin of
 [`netbox-proxbox`](https://github.com/emersonfelipesp/netbox-proxbox); it
-reuses `netbox-proxbox` FastAPI endpoint resolution and job conventions when
-that plugin is installed, and falls back to its own `proxbox_api_url` /
-`proxbox_api_key` plugin settings otherwise.
+reuses the `PDMEndpoint` and `PDMRemote` models owned by `netbox-proxbox`.
+The local `proxbox_api_url` and `proxbox_api_key` settings are reserved for a
+future integration and are unused by the current sync job.
 `netbox-proxbox` remains a required NetBox peer plugin in `PLUGINS` and a
 Python package dependency. Fail-closed branch isolation is guaranteed across
 the supported `netbox-proxbox` range. Version 0.0.27 and later supply the typed
@@ -18,7 +18,8 @@ fail-closed runtime-probe fallback.
 ## Status
 
 `netbox-pdm` v0.0.2 ships PDM endpoint and remote inventory views, sync job
-wiring, and the proxmox-sdk-backed PDM client path. The plugin never writes
+wiring, and the proxmox-sdk-backed PDM client path. PDM-managed SDN zones and
+VNets are not implemented. The plugin never writes
 configuration back to PDM; sync reconciles NetBox inventory rows only.
 
 Security and reconciliation behavior:

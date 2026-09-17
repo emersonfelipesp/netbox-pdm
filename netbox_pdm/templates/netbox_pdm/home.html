@@ -6,12 +6,13 @@
   <div class="container-fluid">
     <h1>Proxmox Datacenter Manager</h1>
     <p class="text-muted">
-      Read-only NetBox inventory of PDM remotes, views, and SDN-adjacent state,
-      reflected through <code>proxbox-api</code>.
+      NetBox configuration views for PDM endpoints and read-only synchronized
+      inventory of PDM remotes.
     </p>
     <p>
-      This plugin is in v0.0.1.post1 — installation only. Model and sync views ship
-      in upcoming releases.
+      Version 0.0.2 synchronizes remote inventory directly through
+      <code>proxmox-sdk</code> <code>SyncPDMClient</code>. PDM-managed SDN zones
+      and VNets remain roadmap scope.
     </p>
   </div>
 {% endblock %}

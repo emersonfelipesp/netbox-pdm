@@ -11,6 +11,12 @@ Submodule layout and cross-repo links: `/root/personal-context/claude-reference/
 
 NetBox plugin for netbox-pdm integration with netbox.nmulti.cloud.
 
+Current sync uses `proxmox_sdk.pdm.client.SyncPDMClient` to call the PDM API
+directly. It does not traverse `proxbox-api`; the local proxbox-api settings are
+reserved for future use. Implemented inventory covers PDM endpoints and remotes.
+PDM-managed SDN zones and VNets remain roadmap scope and must not be described
+as current functionality.
+
 ## Installation
 
 ```bash

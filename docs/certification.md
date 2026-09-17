@@ -3,13 +3,18 @@
 `netbox-pdm` is prepared for the NetBox Plugin Certification Program as a
 read-only companion plugin for Proxmox Datacenter Manager inventory.
 
+The implemented inventory scope is PDM endpoints and remotes. Sync calls PDM
+directly through `proxmox-sdk`'s `SyncPDMClient`; it does not require
+`proxbox-api`. PDM-managed SDN zones and VNets remain roadmap items.
+
 | Requirement | Evidence |
 | --- | --- |
 | License | Apache-2.0 in the repository and package metadata |
 | Package | Published as `netbox-pdm` on PyPI with source, docs, and issues URLs |
 | Compatibility | Backward-compatible NetBox `4.5.8`–`4.6.x` plus official `4.7.0` GA, matrix-tested through v4.6.6; official GA source tested at exact revision `5f06007e4c9bacc93ce17c1e645fc1143d60df3d` |
 | Tests | GitHub Actions run lint, compile, pytest, Docker install smoke, page coverage, and release validation |
-| Docs | README plus MkDocs installation, roadmap, certification, and release-note pages |
+| Docs | README plus MkDocs installation, architecture, roadmap, certification, and release-note pages |
+| Transport and scope | Direct `SyncPDMClient` PDM transport; endpoint/remote inventory implemented; SDN zones and VNets explicitly deferred |
 | Screenshots | `docs-screenshots.yml` captures NetBox v4.6.4 UI screenshots on release tags or manual dispatch |
 | Support | GitHub Issues in `emersonfelipesp/netbox-pdm` |
 

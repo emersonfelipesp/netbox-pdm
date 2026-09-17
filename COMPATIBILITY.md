@@ -1,7 +1,7 @@
 # Compatibility Matrix
 
-> `proxbox-api` is a separately deployed backend service. `netbox-pdm`
-> communicates with it over HTTP.
+> Current `netbox-pdm` sync connects directly to the PDM API through
+> `proxmox-sdk`'s `SyncPDMClient`. It does not require `proxbox-api`.
 
 ## Supported NetBox releases
 
@@ -17,10 +17,10 @@ The shared compatibility module is vendored byte-identically across
 
 ## Verification matrix
 
-| Plugin release | NetBox releases | netbox-proxbox | Python | proxbox-api |
+| Plugin release | NetBox releases | netbox-proxbox | Python | PDM transport |
 |---|---|---|---|---|
-| v0.0.2 branch | v4.5.8–v4.6.6 and official v4.7.0 GA | ≥0.0.25.post2,<0.1.0 | ≥3.12 | Required |
-| v0.0.1 | 4.5.x–4.6.x | ≥0.0.18,<0.1.0 | ≥3.12 | Required |
+| v0.0.2 branch | v4.5.8–v4.6.6 and official v4.7.0 GA | ≥0.0.25.post2,<0.1.0 | ≥3.12 | Direct `SyncPDMClient`; no proxbox-api process |
+| v0.0.1 | 4.5.x–4.6.x | ≥0.0.18,<0.1.0 | ≥3.12 | No implemented inventory sync |
 
 Fail-closed branch isolation is guaranteed with every supported
 `netbox-proxbox` version. Starting with 0.0.27, `netbox-pdm` consumes the typed
