@@ -1,14 +1,4 @@
-# CLAUDE.md — netbox-pdm — AGENTS.md Mirror
-
-This file mirrors the sibling `CLAUDE.md` guidance for agents that read `AGENTS.md`. Treat `CLAUDE.md` as the source material; the content below preserves the current guide.
-
-## Source
-
-@CLAUDE.md
-
----
-
-# CLAUDE.md — netbox-pdm
+# AGENTS.md — netbox-pdm
 
 ## Workspace Context
 
@@ -145,3 +135,5 @@ source revision
 `5f06007e4c9bacc93ce17c1e645fc1143d60df3d`. Existing installations retain
 the historical floor and can upgrade without a database reset or configuration
 rewrite.
+
+# CLAUDE.md — netbox-pdm
