@@ -196,8 +196,9 @@ def test_compat_imports_no_django_at_module_scope() -> None:
         ("4.7.0-beta2", "experimental"),
         ("4.7.0b2", "experimental"),
         # The plugin intentionally admits only the official 4.7.0 GA release.
-        ("4.7.1", "unsupported-new"),
-        ("4.7.99", "unsupported-new"),
+        ("4.7.1", "stable"),
+        ("4.7.2", "stable"),
+        ("4.7.99", "stable"),
         ("4.8.0", "unsupported-new"),
         ("5.0.0", "unsupported-new"),
     ],
@@ -254,7 +255,7 @@ def test_ga_and_prerelease_display_strings_have_distinct_bands() -> None:
 def test_declared_bounds_have_the_expected_literal_values() -> None:
     """Pins the shared contract so a silent band change fails here."""
     assert STABLE_MIN_NETBOX_VERSION == "4.5.8"
-    assert STABLE_MAX_NETBOX_VERSION == "4.7.0"
+    assert STABLE_MAX_NETBOX_VERSION == "4.7.99"
     assert PLUGIN_MIN_VERSION == STABLE_MIN_NETBOX_VERSION
     assert PLUGIN_MAX_VERSION == STABLE_MAX_NETBOX_VERSION
     assert CONTRACT_VERSION == "netbox-compat-v5"

@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- NetBox 4.5.8 through 4.6.6, plus official NetBox 4.7.0 GA
+- NetBox 4.5.8 through 4.6.6, plus the NetBox 4.7 series (4.7.0 GA through 4.7.99)
 - Python 3.12+
 - [`netbox-proxbox`](https://github.com/emersonfelipesp/netbox-proxbox) `>=0.0.25.post2,<0.1.0`
   installed as a NetBox peer plugin

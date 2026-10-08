@@ -129,10 +129,9 @@ For comprehensive deploy infrastructure documentation, see `/root/personal-conte
 ## NetBox compatibility: backward compatibility plus official GA
 
 `netbox_pdm/compat.py` preserves the Emerson-owned NetBox `4.5.8` floor
-and admits official NetBox `4.7.0` GA as stable. The plugin declares
-`min_version = "4.5.8"` and `max_version = "4.7.0"`. NetBox 4.7
-prereleases remain experimental; 4.7.1 and later are outside this release's
-tested contract.
+and admits NetBox 4.7 GA (`4.7.0`) and later 4.7 patch releases (through `4.7.99`) as stable. The plugin declares
+`min_version = "4.5.8"` and `max_version = "4.7.99"`. NetBox 4.7
+prereleases remain experimental; 4.7.x patch releases through `4.7.99` (admitted by the numeric gate; CI evidence currently reaches 4.7.0) are admitted as stable.
 
 The compatibility module is vendored byte-identically across
 `netbox-proxbox`, `netbox-ceph`, `netbox-pbs`, and `netbox-pdm`.

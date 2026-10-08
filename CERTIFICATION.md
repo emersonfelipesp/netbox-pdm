@@ -6,7 +6,7 @@ This checklist tracks readiness for the NetBox Plugin Certification Program.
 | --- | --- |
 | Open source license | Apache-2.0 in `LICENSE` and `pyproject.toml` |
 | Package metadata | PyPI project `netbox-pdm`, project URLs, classifiers, Python `>=3.12` |
-| NetBox compatibility | Backward-compatible `4.5.8`–`4.6.x` plus official `v4.7.0` GA; `v4.7.1+` remains outside the tested contract |
+| NetBox compatibility | Backward-compatible `4.5.8`–`4.6.x` plus official `v4.7.0` GA; `v4.7.1`–`v4.7.99` are admitted by the numeric gate but are not yet covered by CI |
 | Dependency policy | Python dependencies keep `proxmox-sdk>=0.0.12` resolvable; `netbox-proxbox>=0.0.25.post2,<0.1.0` is enforced as the owning peer for PDM models; sync calls PDM directly through `SyncPDMClient` and does not require `proxbox-api` |
 | Implemented scope | PDM endpoint views and configuration plus remote inventory reconciliation; PDM-managed SDN zones and VNets remain planned, not implemented |
 | CI | GitHub Actions run lint, compile, pytest, docs, page coverage, screenshot capture, and release validation |

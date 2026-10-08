@@ -6,11 +6,11 @@
 ## Supported NetBox releases
 
 `netbox-pdm` is an Emerson-owned plugin. Its compatibility contract preserves
-the historical NetBox `4.5.8` floor and adds official NetBox `4.7.0` GA.
-The declared plugin bounds are `4.5.8` through `4.7.0`.
+the historical NetBox `4.5.8` floor and adds the NetBox 4.7 series (`4.7.0` GA through `4.7.99`).
+The declared plugin bounds are `4.5.8` through `4.7.99`.
 
 NetBox 4.7 prereleases remain experimental and are not production support.
-NetBox 4.7.1 and later are outside this release's tested contract.
+NetBox 4.7.x patch releases through `4.7.99` (admitted by the numeric gate; CI evidence currently reaches 4.7.0) are admitted as stable.
 
 The shared compatibility module is vendored byte-identically across
 `netbox-proxbox`, `netbox-ceph`, `netbox-pbs`, and `netbox-pdm`.

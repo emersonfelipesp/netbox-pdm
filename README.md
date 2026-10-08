@@ -86,8 +86,7 @@ install smoke covers official NetBox v4.7.0 GA; exact-source integration tests
 cover the backward-compatible v4.5.8 through v4.6.6 range.
 
 Canonical NetBox `v4.7.0 GA` metadata is admitted on a **GA**
-basis and runs without a compatibility warning; 4.7.1 and later fail
-closed. CI pins exact source revision
+basis and runs without a compatibility warning; 4.7.1 through 4.7.99 are admitted by the same numeric gate (CI evidence currently reaches 4.7.0), and releases above 4.7.99 are refused. CI pins exact source revision
 `5f06007e4c9bacc93ce17c1e645fc1143d60df3d`; the shared numeric compatibility
 bounds preserve the historical upgrade path. See [COMPATIBILITY.md](COMPATIBILITY.md)
 for the tier table and the Proxbox-family upgrade procedure.
